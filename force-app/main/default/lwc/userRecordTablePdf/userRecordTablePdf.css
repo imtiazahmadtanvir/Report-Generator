@@ -361,6 +361,40 @@
     font-size: 1.25rem;
     font-weight: 800;
     color: #0f172a;
+    flex-wrap: wrap;
+}
+
+.callout-object-name .object-type-badge {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+}
+
+.callout-object-name .object-type-badge::before {
+    content: "•";
+    margin-right: 6px;
+    margin-left: 2px;
+    opacity: 0.55;
+    font-size: 0.95rem;
+    color: #64748b;
+}
+
+.callout-object-name .badge-standard {
+    background: transparent !important;
+    border: none !important;
+    color: #0176d3 !important;
+}
+
+.callout-object-name .badge-custom {
+    background: transparent !important;
+    border: none !important;
+    color: #7c3aed !important;
 }
 
 .callout-icon {
@@ -733,11 +767,11 @@
     box-shadow: 0 2px 6px rgba(99, 102, 241, 0.2);
 }
 
-.object-type-badge,
+/* Object Pill Badges on Catalog Grid Cards */
 .object-pill-badge {
     display: inline-flex;
     align-items: center;
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 700;
     padding: 2px 8px;
     border-radius: 9999px;
@@ -747,16 +781,27 @@
     vertical-align: middle;
 }
 
+.object-pill-badge.badge-standard,
 .badge-standard {
     background: #f0f7ff;
     color: #0176d3;
     border: 1px solid #bae6fd;
 }
 
+.object-pill-badge.badge-custom,
 .badge-custom {
     background: #f5f3ff;
     color: #7c3aed;
     border: 1px solid #ddd6fe;
+}
+
+/* Explicitly guarantee object-type-badge has NO background or border */
+.object-type-badge {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
 }
 
 .card-info {
@@ -922,6 +967,38 @@
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
+}
+
+.summary-title-line .object-type-badge {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+}
+
+.summary-title-line .object-type-badge::before {
+    content: "•";
+    margin-right: 8px;
+    opacity: 0.55;
+    font-size: 0.95rem;
+    color: #64748b;
+}
+
+.summary-title-line .badge-standard {
+    background: transparent !important;
+    border: none !important;
+    color: #0176d3 !important;
+}
+
+.summary-title-line .badge-custom {
+    background: transparent !important;
+    border: none !important;
+    color: #7c3aed !important;
 }
 
 .summary-object-heading {
