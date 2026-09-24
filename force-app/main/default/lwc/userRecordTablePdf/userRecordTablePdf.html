@@ -123,36 +123,96 @@
                     </div>
                 </div>
 
-                <!-- SEARCH & FILTER TOOLBAR -->
-                <div class="explorer-toolbar">
-                    <!-- Search Input -->
-                    <div class="toolbar-search-box">
-                        <lightning-icon icon-name="utility:search" size="x-small" class="search-box-icon"></lightning-icon>
-                        <input
-                            type="text"
-                            placeholder="Filter objects by label or API name..."
-                            value={objectFilterSearch}
-                            oninput={handleObjectSearchInput}
-                            class="custom-search-input" />
-                        <template lwc:if={objectFilterSearch}>
-                            <button class="clear-search-btn" onclick={handleClearObjectSearch}>✕</button>
-                        </template>
-                    </div>
+                <!-- ============================================================== -->
+                <!-- SEARCH & DROPDOWN SELECTION HUB                                -->
+                <!-- (Search Object placed BEFORE the picklist dropdown)            -->
+                <!-- ============================================================== -->
+                <div class="explorer-selection-hub">
+                    <div class="hub-card-panel">
+                        <div class="hub-header-row">
+                            <div class="hub-title-box">
+                                <span class="hub-step-pill">STEP 1 OF 2</span>
+                                <h2 class="hub-main-title">Select the Salesforce Object</h2>
+                                <p class="hub-subtitle">Search or pick from all Standard and Custom objects accessible to your profile in this Salesforce organization.</p>
+                            </div>
 
-                    <!-- Category Filter Tabs -->
-                    <div class="toolbar-filter-tabs">
-                        <button class={allTabClass} data-category="all" onclick={handleSelectCategory}>
-                            <span>All Objects</span>
-                            <span class="tab-count-pill">{countAll}</span>
-                        </button>
-                        <button class={standardTabClass} data-category="standard" onclick={handleSelectCategory}>
-                            <span>Standard</span>
-                            <span class="tab-count-pill">{countStandard}</span>
-                        </button>
-                        <button class={customTabClass} data-category="custom" onclick={handleSelectCategory}>
-                            <span>Custom Objects</span>
-                            <span class="tab-count-pill">{countCustom}</span>
-                        </button>
+                            <!-- Category Filter Tabs -->
+                            <div class="toolbar-filter-tabs">
+                                <button class={allTabClass} data-category="all" onclick={handleSelectCategory}>
+                                    <span>All Objects</span>
+                                    <span class="tab-count-pill">{countAll}</span>
+                                </button>
+                                <button class={standardTabClass} data-category="standard" onclick={handleSelectCategory}>
+                                    <span>Standard</span>
+                                    <span class="tab-count-pill">{countStandard}</span>
+                                </button>
+                                <button class={customTabClass} data-category="custom" onclick={handleSelectCategory}>
+                                    <span>Custom Objects</span>
+                                    <span class="tab-count-pill">{countCustom}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- INPUT CONTROLS: 1. SEARCH OBJECT (BEFORE DROPDOWN), 2. PICKLIST DROPDOWN, 3. BUTTON -->
+                        <div class="hub-fields-row">
+                            <!-- 1. Search Object (BEFORE picklist dropdown) -->
+                            <div class="hub-col hub-search-col">
+                                <label class="hub-field-label" for="objectSearchFilterInput">
+                                    <lightning-icon icon-name="utility:search" size="xx-small" class="field-icon-lead"></lightning-icon>
+                                    Search Object (Live Filter)
+                                </label>
+                                <div class="hub-input-wrap">
+                                    <input
+                                        id="objectSearchFilterInput"
+                                        type="text"
+                                        placeholder="Type to search (e.g. Account, Contact, Lead, Custom__c)..."
+                                        value={objectFilterSearch}
+                                        oninput={handleObjectSearchInput}
+                                        class="hub-search-input" />
+                                    <template lwc:if={objectFilterSearch}>
+                                        <button class="clear-search-btn" onclick={handleClearObjectSearch} title="Clear Search">✕</button>
+                                    </template>
+                                </div>
+                                <span class="field-help-text">Filters the picklist dropdown and cards in real time</span>
+                            </div>
+
+                            <!-- 2. Choose Salesforce Object Picklist Dropdown -->
+                            <div class="hub-col hub-dropdown-col">
+                                <label class="hub-field-label">
+                                    <lightning-icon icon-name="utility:down" size="xx-small" class="field-icon-lead"></lightning-icon>
+                                    Choose Salesforce Object ({filteredDropdownOptions.length} available)
+                                </label>
+                                <div class="hub-combobox-wrap">
+                                    <lightning-combobox
+                                        name="objectSelectorCombobox"
+                                        variant="label-hidden"
+                                        placeholder="Choose an accessible object..."
+                                        value={selectedObject}
+                                        options={filteredDropdownOptions}
+                                        onchange={handleDropdownChange}
+                                        dropdown-alignment="auto"
+                                        class="hub-combobox-control">
+                                    </lightning-combobox>
+                                </div>
+                                <span class="field-help-text">
+                                    <lightning-icon icon-name="utility:info_alt" size="xx-small" class="info-icon-small"></lightning-icon>
+                                    {dropdownOptionCountLabel}
+                                </span>
+                            </div>
+
+                            <!-- 3. Action CTA Button -->
+                            <div class="hub-col hub-action-col">
+                                <label class="hub-field-label hub-label-blank">&nbsp;</label>
+                                <lightning-button
+                                    variant="brand"
+                                    label="Select Object & Continue →"
+                                    icon-name="utility:forward"
+                                    icon-position="right"
+                                    onclick={handleProceedToStep2}
+                                    class="btn-hub-continue">
+                                </lightning-button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

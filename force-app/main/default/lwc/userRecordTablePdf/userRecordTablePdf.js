@@ -137,6 +137,27 @@ export default class UserRecordTablePdf extends LightningElement {
     // Step 1: Object Filtering & Selection
     handleObjectSearchInput(event) {
         this.objectFilterSearch = event.target.value;
+        const filtered = this.filteredDropdownOptions;
+        if (filtered.length > 0 && !filtered.some(o => o.value === this.selectedObject)) {
+            this.selectedObject = filtered[0].value;
+            const matched = this.allObjects.find(o => o.value === this.selectedObject);
+            if (matched) {
+                this.selectedObjectLabel = matched.label;
+                this.selectedObjectIsCustom = matched.isCustom;
+            }
+        }
+    }
+
+    handleDropdownChange(event) {
+        const val = event.detail?.value || event.target?.value;
+        if (val) {
+            this.selectedObject = val;
+            const matched = this.allObjects.find(o => o.value === val);
+            if (matched) {
+                this.selectedObjectLabel = matched.label;
+                this.selectedObjectIsCustom = matched.isCustom;
+            }
+        }
     }
 
     handleClearObjectSearch() {
@@ -532,6 +553,33 @@ export default class UserRecordTablePdf extends LightningElement {
 
     get countCustom() {
         return this.allObjects.filter(o => o.isCustom).length;
+    }
+
+    // Dynamic Filtered Dropdown Options for Choose Salesforce Object Combobox
+    get filteredDropdownOptions() {
+        const query = (this.objectFilterSearch || '').toLowerCase().trim();
+        const category = this.objectCategoryFilter;
+
+        return this.allObjects
+            .filter(obj => {
+                if (category === 'standard' && obj.isCustom) return false;
+                if (category === 'custom' && !obj.isCustom) return false;
+                if (query) {
+                    const matchesLabel = (obj.label || '').toLowerCase().includes(query);
+                    const matchesValue = (obj.value || '').toLowerCase().includes(query);
+                    return matchesLabel || matchesValue;
+                }
+                return true;
+            })
+            .map(obj => ({
+                label: `${obj.label} (${obj.value}) [${obj.isCustom ? 'Custom' : 'Standard'}]`,
+                value: obj.value
+            }));
+    }
+
+    get dropdownOptionCountLabel() {
+        const count = this.filteredDropdownOptions.length;
+        return `Found ${count} accessible ${count === 1 ? 'object' : 'objects'} (Standard & Custom)`;
     }
 
     // Dynamic Filtered Object Cards (eliminates giant empty space!)
