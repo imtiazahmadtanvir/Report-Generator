@@ -281,15 +281,15 @@ public with sharing class UserRecordPdfController {
                 }
             }
 
-            // If no valid fields requested, pick default fields
+            // If no valid fields requested, pick default fields (4 default columns)
             if (validFieldNames.isEmpty()) {
                 if (fieldMap.containsKey(nameField.toLowerCase())) {
                     validFieldNames.add(nameField);
                     addedFields.add(nameField.toLowerCase());
                 }
-                // Pick up to 5 additional common accessible fields
+                // Pick up to 4 total accessible fields
                 for (FieldOption fo : allFields) {
-                    if (validFieldNames.size() >= 6) break;
+                    if (validFieldNames.size() >= 4) break;
                     if (!addedFields.contains(fo.value.toLowerCase())) {
                         validFieldNames.add(fo.value);
                         addedFields.add(fo.value.toLowerCase());

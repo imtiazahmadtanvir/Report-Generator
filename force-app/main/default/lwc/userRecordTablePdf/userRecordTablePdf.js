@@ -222,9 +222,9 @@ export default class UserRecordTablePdf extends LightningElement {
             this.totalCount = data.totalCount || 0;
             this.myRecordCount = data.myRecordCount || 0;
 
-            // If selectedColumns is empty, initialize with default fields
+            // If selectedColumns is empty, initialize with default fields (4 columns)
             if (!this.selectedColumns || this.selectedColumns.length === 0) {
-                this.selectedColumns = data.defaultSelectedFields || [];
+                this.selectedColumns = (data.defaultSelectedFields || []).slice(0, 4);
             }
 
             this.updateDefaultPdfTitle();
@@ -263,7 +263,7 @@ export default class UserRecordTablePdf extends LightningElement {
     }
 
     handleResetDefaultFields() {
-        const defaultNames = this.allAvailableFields.slice(0, 6).map(f => f.value);
+        const defaultNames = this.allAvailableFields.slice(0, 4).map(f => f.value);
         this.tempSelectedFieldNames = defaultNames;
     }
 
