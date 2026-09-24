@@ -91,17 +91,17 @@
         <!-- STEP 1: FULL-WIDTH OBJECT CATALOG EXPLORER (NO EMPTY SPACE!)   -->
         <!-- ============================================================== -->
         <template lwc:if={isStep1}>
-            <div class="step1-fullpage-view">
+            <div class="step1-explorer-view">
                 <!-- EXPLORER HERO BANNER -->
                 <div class="explorer-hero-strip">
                     <div class="hero-text-col">
                         <div class="hero-badge">
                             <lightning-icon icon-name="utility:database" size="xx-small" class="hero-badge-icon"></lightning-icon>
-                            <span>STEP 1 OF 2 • OBJECT SELECTION</span>
+                            <span>OBJECT CATALOG EXPLORER</span>
                         </div>
-                        <h1 class="hero-headline">Select the Salesforce Object</h1>
+                        <h1 class="hero-headline">Select a Salesforce Object</h1>
                         <p class="hero-subline">
-                            Search or choose from all <strong>{countAll} accessible objects</strong> in your Salesforce organization. Choose an object to explore its live fields, view records, and generate multi-page PDF exports.
+                            Choose from <strong>{countAll} accessible objects</strong> in your Salesforce organization. Select an object to explore its fields, view live records, and export custom PDF reports.
                         </p>
                     </div>
 
@@ -116,95 +116,52 @@
                             </div>
                             <span class="callout-api-name">API Name: {selectedObject}</span>
                             <button class="callout-action-btn" onclick={handleProceedToStep2}>
-                                <span>Select Object & Continue</span>
+                                <span>Proceed to Fields & Records</span>
                                 <lightning-icon icon-name="utility:forward" size="xx-small" class="slds-m-left_x-small"></lightning-icon>
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- FULL-WIDTH SEARCH & DROPDOWN SELECTION HUB -->
-                <div class="explorer-selection-hub">
-                    <div class="hub-controls-row">
-                        <!-- 1. Real-time Search Box -->
-                        <div class="hub-field-cell hub-search-cell">
-                            <label class="hub-field-label">
-                                <lightning-icon icon-name="utility:search" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
-                                Search Objects (Live Filter)
-                            </label>
-                            <div class="hub-search-input-box">
-                                <input
-                                    type="text"
-                                    placeholder="Type to search any object (e.g. Account, Contact, Lead, Custom_Obj__c)..."
-                                    value={objectFilterSearch}
-                                    oninput={handleObjectSearchInput}
-                                    class="hub-search-input" />
-                                <template lwc:if={objectFilterSearch}>
-                                    <button class="clear-search-btn" onclick={handleClearObjectSearch} title="Clear Search">✕</button>
-                                </template>
-                            </div>
-                        </div>
-
-                        <!-- 2. Choose Salesforce Object Dropdown -->
-                        <div class="hub-field-cell hub-dropdown-cell">
-                            <label class="hub-field-label">
-                                <lightning-icon icon-name="utility:down" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
-                                Choose Salesforce Object ({filteredDropdownOptions.length} available)
-                            </label>
-                            <lightning-combobox
-                                name="objectSelectorCombobox"
-                                variant="label-hidden"
-                                placeholder="Choose an accessible object..."
-                                value={selectedObject}
-                                options={filteredDropdownOptions}
-                                onchange={handleDropdownChange}
-                                class="hub-combobox">
-                            </lightning-combobox>
-                        </div>
-
-                        <!-- 3. Primary CTA Button -->
-                        <div class="hub-field-cell hub-action-cell">
-                            <lightning-button
-                                variant="brand"
-                                label="Select Object & Continue →"
-                                icon-name="utility:forward"
-                                icon-position="right"
-                                onclick={handleProceedToStep2}
-                                class="btn-hub-cta">
-                            </lightning-button>
-                        </div>
+                <!-- SEARCH & FILTER TOOLBAR -->
+                <div class="explorer-toolbar">
+                    <!-- Search Input -->
+                    <div class="toolbar-search-box">
+                        <lightning-icon icon-name="utility:search" size="x-small" class="search-box-icon"></lightning-icon>
+                        <input
+                            type="text"
+                            placeholder="Filter objects by label or API name..."
+                            value={objectFilterSearch}
+                            oninput={handleObjectSearchInput}
+                            class="custom-search-input" />
+                        <template lwc:if={objectFilterSearch}>
+                            <button class="clear-search-btn" onclick={handleClearObjectSearch}>✕</button>
+                        </template>
                     </div>
 
-                    <!-- Category Filter Tabs & Quick Info -->
-                    <div class="hub-subbar-row">
-                        <div class="toolbar-filter-tabs">
-                            <button class={allTabClass} data-category="all" onclick={handleSelectCategory}>
-                                <span>All Objects</span>
-                                <span class="tab-count-pill">{countAll}</span>
-                            </button>
-                            <button class={standardTabClass} data-category="standard" onclick={handleSelectCategory}>
-                                <span>Standard</span>
-                                <span class="tab-count-pill">{countStandard}</span>
-                            </button>
-                            <button class={customTabClass} data-category="custom" onclick={handleSelectCategory}>
-                                <span>Custom Objects</span>
-                                <span class="tab-count-pill">{countCustom}</span>
-                            </button>
-                        </div>
-
-                        <div class="hub-quick-tip">
-                            <lightning-icon icon-name="utility:info_alt" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
-                            <span>Select via dropdown or click any card below (double-click to jump directly to records)</span>
-                        </div>
+                    <!-- Category Filter Tabs -->
+                    <div class="toolbar-filter-tabs">
+                        <button class={allTabClass} data-category="all" onclick={handleSelectCategory}>
+                            <span>All Objects</span>
+                            <span class="tab-count-pill">{countAll}</span>
+                        </button>
+                        <button class={standardTabClass} data-category="standard" onclick={handleSelectCategory}>
+                            <span>Standard</span>
+                            <span class="tab-count-pill">{countStandard}</span>
+                        </button>
+                        <button class={customTabClass} data-category="custom" onclick={handleSelectCategory}>
+                            <span>Custom Objects</span>
+                            <span class="tab-count-pill">{countCustom}</span>
+                        </button>
                     </div>
                 </div>
 
-                <!-- OBJECT CARDS FULL-PAGE RESPONSIVE GRID -->
+                <!-- OBJECT CARDS RESPONSIVE GRID -->
                 <div class="objects-grid-container">
                     <template lwc:if={isLoadingObjects}>
                         <div class="loading-state-container">
                             <lightning-spinner alternative-text="Loading objects catalog..." size="medium"></lightning-spinner>
-                            <span class="loading-label">Loading all accessible Salesforce objects...</span>
+                            <span class="loading-label">Loading accessible Salesforce objects...</span>
                         </div>
                     </template>
 
@@ -226,8 +183,8 @@
                                     </div>
 
                                     <div class="card-info">
-                                        <h3 class="card-object-label" title={obj.label}>{obj.label}</h3>
-                                        <span class="card-object-api" title={obj.value}>{obj.value}</span>
+                                        <h3 class="card-object-label">{obj.label}</h3>
+                                        <span class="card-object-api">{obj.value}</span>
                                     </div>
 
                                     <div class="card-bottom-row">
@@ -253,12 +210,11 @@
                         <span class="bottom-selected-label">Selected Object:</span>
                         <strong class="bottom-selected-name">{selectedObjectLabel}</strong>
                         <span class="bottom-selected-api">({selectedObject})</span>
-                        <span class={selectedObjectBadgeClass}>{selectedObjectBadgeText}</span>
                     </div>
                     <div class="bottom-bar-right">
                         <lightning-button
                             variant="brand"
-                            label="Select Object & Continue →"
+                            label="Configure Columns & View Records →"
                             icon-name="utility:forward"
                             icon-position="right"
                             onclick={handleProceedToStep2}

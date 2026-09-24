@@ -159,18 +159,6 @@ export default class UserRecordTablePdf extends LightningElement {
         }
     }
 
-    handleDropdownChange(event) {
-        const selectedVal = event.detail.value;
-        if (selectedVal) {
-            this.selectedObject = selectedVal;
-            const matched = this.allObjects.find(o => o.value === selectedVal);
-            if (matched) {
-                this.selectedObjectLabel = matched.label;
-                this.selectedObjectIsCustom = matched.isCustom;
-            }
-        }
-    }
-
     handleCardDoubleClick(event) {
         this.handleCardSelect(event);
         this.handleProceedToStep2();
@@ -544,28 +532,6 @@ export default class UserRecordTablePdf extends LightningElement {
 
     get countCustom() {
         return this.allObjects.filter(o => o.isCustom).length;
-    }
-
-    // Dynamic Filtered Dropdown Options for Choose Salesforce Object Combobox
-    get filteredDropdownOptions() {
-        const query = (this.objectFilterSearch || '').toLowerCase().trim();
-        const category = this.objectCategoryFilter;
-
-        return this.allObjects
-            .filter(obj => {
-                if (category === 'standard' && obj.isCustom) return false;
-                if (category === 'custom' && !obj.isCustom) return false;
-                if (query) {
-                    const matchesLabel = (obj.label || '').toLowerCase().includes(query);
-                    const matchesValue = (obj.value || '').toLowerCase().includes(query);
-                    return matchesLabel || matchesValue;
-                }
-                return true;
-            })
-            .map(obj => ({
-                label: `${obj.label} (${obj.value}) [${obj.isCustom ? 'Custom' : 'Standard'}]`,
-                value: obj.value
-            }));
     }
 
     // Dynamic Filtered Object Cards (eliminates giant empty space!)

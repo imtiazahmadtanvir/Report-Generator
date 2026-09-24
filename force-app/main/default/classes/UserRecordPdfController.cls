@@ -127,26 +127,33 @@ public with sharing class UserRecordPdfController {
             Map<String, Schema.SObjectType> globalDescribe = Schema.getGlobalDescribe();
             List<ObjectOption> options = new List<ObjectOption>();
 
+            // Common standard CRM objects to prioritize
+            Set<String> commonStandardObjects = new Set<String>{
+                'account', 'contact', 'opportunity', 'lead', 'case', 'campaign',
+                'order', 'contract', 'product2', 'pricebook2', 'asset', 'task',
+                'event', 'user', 'solution'
+            };
+
             for (String key : globalDescribe.keySet()) {
                 String lowerKey = key.toLowerCase();
                 
-                // Exclude purely technical and internal system objects
+                // Exclude system internal objects
                 if (lowerKey.endsWith('__share') || lowerKey.endsWith('__history') || 
                     lowerKey.endsWith('__feed') || lowerKey.endsWith('__changeevent') ||
-                    lowerKey.endsWith('__tag') || lowerKey.endsWith('__e') ||
-                    lowerKey.endsWith('__hd') ||
-                    lowerKey.startsWith('auth') || lowerKey.startsWith('apex') || 
-                    lowerKey.startsWith('async') || lowerKey.startsWith('cron') ||
-                    lowerKey.startsWith('processinstance') || lowerKey.startsWith('vote') ||
-                    lowerKey.startsWith('datastream') || lowerKey.startsWith('setupaudit') ||
-                    lowerKey.startsWith('login') || lowerKey.startsWith('staticresource') ||
-                    lowerKey.startsWith('contentdocumentlink') || lowerKey.startsWith('attachedcontentdocument')) {
+                    lowerKey.endsWith('__tag') || lowerKey.startsWith('auth') ||
+                    lowerKey.startsWith('apex') || lowerKey.startsWith('async')) {
                     continue;
                 }
 
-                Schema.DescribeSObjectResult describe = globalDescribe.get(key).getDescribe();
-                if (describe.isAccessible() && describe.isQueryable() && !describe.isCustomSetting() && !describe.isDeprecatedAndHidden()) {
-                    options.add(new ObjectOption(describe.getLabel(), describe.getName(), describe.isCustom()));
+                // Check custom object OR common standard object OR uppercase standard object
+                Boolean isCustom = lowerKey.endsWith('__c');
+                Boolean isCommon = commonStandardObjects.contains(lowerKey);
+
+                if (isCustom || isCommon) {
+                    Schema.DescribeSObjectResult describe = globalDescribe.get(key).getDescribe();
+                    if (describe.isAccessible() && describe.isQueryable() && !describe.isCustomSetting()) {
+                        options.add(new ObjectOption(describe.getLabel(), describe.getName(), describe.isCustom()));
+                    }
                 }
             }
 

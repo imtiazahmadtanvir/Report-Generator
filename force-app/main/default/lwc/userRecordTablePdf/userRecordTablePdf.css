@@ -36,12 +36,10 @@
     border: 1px solid var(--card-border);
     overflow: hidden;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    min-height: 100vh;
+    min-height: 600px;
     width: 100%;
     margin: 0;
     padding: 0;
-    display: flex;
-    flex-direction: column;
 }
 
 /* ==========================================================================
@@ -264,12 +262,10 @@
 /* ==========================================================================
    2. STEP 1: FULL-WIDTH OBJECT CATALOG EXPLORER (NO UNWANTED WHITE SPACE)
    ========================================================================== */
-.step1-fullpage-view,
 .step1-explorer-view {
     display: flex;
     flex-direction: column;
     width: 100%;
-    flex: 1;
     background: #f8fafc;
 }
 
@@ -396,106 +392,65 @@
     box-shadow: 0 6px 16px rgba(2, 132, 199, 0.5);
 }
 
-/* Full-Width Search & Dropdown Selection Hub */
-.explorer-selection-hub {
+/* Search & Filter Toolbar */
+.explorer-toolbar {
     background: #ffffff;
-    border-bottom: 1.5px solid #cbd5e1;
-    padding: 20px 32px 14px 32px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
-}
-
-.hub-controls-row {
-    display: flex;
-    align-items: flex-end;
-    gap: 20px;
-    flex-wrap: wrap;
-    margin-bottom: 14px;
-}
-
-.hub-field-cell {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.hub-search-cell {
-    flex: 1.2;
-    min-width: 280px;
-}
-
-.hub-dropdown-cell {
-    flex: 1.5;
-    min-width: 320px;
-}
-
-.hub-action-cell {
-    display: flex;
-    align-items: flex-end;
-    padding-bottom: 2px;
-}
-
-.hub-field-label {
-    font-size: 0.82rem;
-    font-weight: 700;
-    color: #1e293b;
-    display: flex;
-    align-items: center;
-}
-
-.hub-search-input-box {
-    position: relative;
-    display: flex;
-    align-items: center;
-    width: 100%;
-}
-
-.hub-search-input {
-    width: 100%;
-    padding: 8px 36px 8px 14px;
-    border: 1.5px solid #cbd5e1;
-    border-radius: var(--radius-sm);
-    font-size: 0.88rem;
-    color: #0f172a;
-    background: #f8fafc;
-    transition: var(--transition);
-    outline: none;
-    height: 38px;
-    box-sizing: border-box;
-}
-
-.hub-search-input:focus {
-    border-color: #0284c7;
-    background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.18);
-}
-
-.hub-combobox {
-    width: 100%;
-}
-
-.btn-hub-cta {
-    --slds-c-button-brand-color-background: #0284c7;
-    --slds-c-button-brand-color-background-hover: #0369a1;
-    font-weight: 700;
-    height: 38px;
-    white-space: nowrap;
-    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
-}
-
-.hub-subbar-row {
+    border-bottom: 1px solid var(--card-border);
+    padding: 14px 32px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 16px;
     flex-wrap: wrap;
-    padding-top: 6px;
 }
 
-.hub-quick-tip {
-    font-size: 0.8rem;
-    color: #64748b;
+.toolbar-search-box {
+    position: relative;
     display: flex;
     align-items: center;
+    flex: 1;
+    min-width: 260px;
+    max-width: 440px;
+}
+
+.search-box-icon {
+    position: absolute;
+    left: 12px;
+    pointer-events: none;
+    --slds-c-icon-color-foreground-default: #64748b;
+}
+
+.custom-search-input {
+    width: 100%;
+    padding: 9px 36px 9px 38px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: var(--radius-md);
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    background: #f8fafc;
+    transition: var(--transition);
+    outline: none;
+}
+
+.custom-search-input:focus {
+    border-color: #0284c7;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.18);
+}
+
+.clear-search-btn {
+    position: absolute;
+    right: 10px;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.clear-search-btn:hover {
+    color: #0f172a;
 }
 
 /* Category Filter Tabs */
@@ -1491,9 +1446,8 @@
     .hero-selected-callout {
         min-width: 100%;
     }
-    .explorer-toolbar,
-    .explorer-selection-hub {
-        padding: 14px 20px;
+    .explorer-toolbar {
+        padding: 12px 20px;
     }
     .objects-grid-container {
         padding: 16px 20px 80px 20px;
@@ -1537,28 +1491,10 @@
         width: 100%;
         justify-content: space-between;
     }
-    .explorer-toolbar,
-    .explorer-selection-hub {
-        padding: 14px 16px;
-    }
-    .hub-controls-row {
+    .explorer-toolbar {
         flex-direction: column;
         align-items: stretch;
         gap: 12px;
-    }
-    .hub-search-cell,
-    .hub-dropdown-cell,
-    .hub-action-cell {
-        width: 100%;
-        min-width: 100%;
-    }
-    .btn-hub-cta {
-        width: 100%;
-    }
-    .hub-subbar-row {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
     }
     .toolbar-search-box {
         max-width: 100%;
