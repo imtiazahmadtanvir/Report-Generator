@@ -69,7 +69,7 @@
                             label="Download PDF"
                             variant="brand"
                             icon-name="utility:download"
-                            onclick={handleDirectDownloadPdf}
+                            onclick={handleOpenExportModal}
                             disabled={isTableEmpty}
                             class="action-btn-cta">
                         </lightning-button>
@@ -525,8 +525,8 @@
             <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_medium">
                 <div class="slds-modal__container">
                     <header class="slds-modal__header modal-header-styled">
-                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={handleCloseColumnModal}>
-                            <lightning-icon icon-name="utility:close" size="small" variant="inverse"></lightning-icon>
+                        <button class="modal-custom-close-btn" title="Close" onclick={handleCloseColumnModal}>
+                            <lightning-icon icon-name="utility:close" size="x-small" class="modal-close-icon"></lightning-icon>
                             <span class="slds-assistive-text">Close</span>
                         </button>
                         <h2 class="slds-modal__title modal-title">
@@ -581,8 +581,8 @@
             <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_small">
                 <div class="slds-modal__container">
                     <header class="slds-modal__header modal-header-styled">
-                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={handleCloseExportModal}>
-                            <lightning-icon icon-name="utility:close" size="small" variant="inverse"></lightning-icon>
+                        <button class="modal-custom-close-btn" title="Close" onclick={handleCloseExportModal}>
+                            <lightning-icon icon-name="utility:close" size="x-small" class="modal-close-icon"></lightning-icon>
                             <span class="slds-assistive-text">Close</span>
                         </button>
                         <h2 class="slds-modal__title modal-title">
@@ -683,8 +683,8 @@
             <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_large">
                 <div class="slds-modal__container">
                     <header class="slds-modal__header modal-header-styled">
-                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={handleClosePreviewModal}>
-                            <lightning-icon icon-name="utility:close" size="small" variant="inverse"></lightning-icon>
+                        <button class="modal-custom-close-btn" title="Close" onclick={handleClosePreviewModal}>
+                            <lightning-icon icon-name="utility:close" size="x-small" class="modal-close-icon"></lightning-icon>
                             <span class="slds-assistive-text">Close</span>
                         </button>
                         <h2 class="slds-modal__title modal-title">

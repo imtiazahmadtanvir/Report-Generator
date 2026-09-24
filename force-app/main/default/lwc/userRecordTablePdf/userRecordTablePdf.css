@@ -1,7 +1,11 @@
 /* ==========================================================================
    USER RECORD TABLE PDF - ENTERPRISE MODERN RESPONSIVE STYLESHEET
-   Supports Desktop (4K/1080p), Laptop, Tablet, Mobile (Portrait & Landscape)
-   Eliminates all unwanted white space with dynamic auto-fill fluid grid
+   Features:
+   - Full device responsiveness (Desktop 4K/1080p, Tablet, Mobile)
+   - Zero clipping on picklist dropdowns (overflow: visible)
+   - Live Search Object field placed directly BEFORE the picklist dropdown
+   - Fluid auto-fill object cards grid (eliminating all unwanted white space)
+   - Synchronized two-way selection (dropdown <-> cards)
    ========================================================================== */
 
 :host {
@@ -26,15 +30,16 @@
     --shadow-soft: 0 4px 18px rgba(15, 23, 42, 0.06);
     --shadow-hover: 0 10px 25px -3px rgba(2, 132, 199, 0.18), 0 4px 6px -4px rgba(2, 132, 199, 0.1);
     --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --slds-c-combobox-dropdown-z-index: 9999;
 }
 
-/* Base Wrapper */
+/* Base Wrapper: overflow visible ensures dropdown menus are NEVER cut off */
 .modern-app-wrapper {
     background: var(--card-bg);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-soft);
     border: 1px solid var(--card-border);
-    overflow: hidden;
+    overflow: visible;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     min-height: 600px;
     width: 100%;
@@ -54,9 +59,10 @@
     color: #ffffff;
     box-shadow: 0 4px 14px rgba(11, 31, 58, 0.2);
     position: relative;
-    z-index: 5;
+    z-index: 10;
     gap: 16px;
     flex-wrap: wrap;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .header-left {
@@ -260,13 +266,14 @@
 }
 
 /* ==========================================================================
-   2. STEP 1: FULL-WIDTH OBJECT CATALOG EXPLORER (NO UNWANTED WHITE SPACE)
+   2. STEP 1: OBJECT SELECTION & SEARCH HUB (NO CLIPPING, NO EMPTY SPACE)
    ========================================================================== */
 .step1-explorer-view {
     display: flex;
     flex-direction: column;
     width: 100%;
     background: #f8fafc;
+    overflow: visible;
 }
 
 /* Explorer Hero Strip */
@@ -392,76 +399,78 @@
     box-shadow: 0 6px 16px rgba(2, 132, 199, 0.5);
 }
 
-/* Search & Filter Toolbar */
-.explorer-toolbar {
+/* ==========================================================================
+   MAIN SEARCH & DROPDOWN SELECTION HUB
+   Search Object input placed BEFORE picklist dropdown
+   ========================================================================== */
+.explorer-selection-hub {
     background: #ffffff;
     border-bottom: 1px solid var(--card-border);
-    padding: 14px 32px;
+    padding: 22px 32px;
+    overflow: visible;
+    position: relative;
+    z-index: 50;
+}
+
+.hub-card-panel {
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: var(--radius-md);
+    padding: 20px 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    overflow: visible;
+    position: relative;
+    z-index: 50;
+}
+
+.hub-header-row {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    margin-bottom: 18px;
     gap: 16px;
     flex-wrap: wrap;
 }
 
-.toolbar-search-box {
-    position: relative;
+.hub-title-box {
     display: flex;
-    align-items: center;
-    flex: 1;
-    min-width: 260px;
-    max-width: 440px;
+    flex-direction: column;
+    gap: 4px;
 }
 
-.search-box-icon {
-    position: absolute;
-    left: 12px;
-    pointer-events: none;
-    --slds-c-icon-color-foreground-default: #64748b;
+.hub-step-pill {
+    align-self: flex-start;
+    background: #0b1f3a;
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    letter-spacing: 0.05em;
 }
 
-.custom-search-input {
-    width: 100%;
-    padding: 9px 36px 9px 38px;
-    border: 1.5px solid #cbd5e1;
-    border-radius: var(--radius-md);
-    font-size: 0.88rem;
-    color: var(--text-primary);
-    background: #f8fafc;
-    transition: var(--transition);
-    outline: none;
-}
-
-.custom-search-input:focus {
-    border-color: #0284c7;
-    background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.18);
-}
-
-.clear-search-btn {
-    position: absolute;
-    right: 10px;
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    font-size: 0.85rem;
-    cursor: pointer;
-    padding: 4px;
-}
-
-.clear-search-btn:hover {
+.hub-main-title {
+    font-size: 1.35rem;
+    font-weight: 800;
     color: #0f172a;
+    margin: 2px 0 0 0;
+    letter-spacing: -0.01em;
+}
+
+.hub-subtitle {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin: 0;
 }
 
 /* Category Filter Tabs */
 .toolbar-filter-tabs {
     display: flex;
     align-items: center;
-    gap: 8px;
-    background: #f1f5f9;
-    padding: 4px;
+    gap: 6px;
+    background: #e2e8f0;
+    padding: 3px;
     border-radius: var(--radius-md);
-    border: 1px solid #e2e8f0;
 }
 
 .category-filter-btn {
@@ -470,11 +479,11 @@
     gap: 6px;
     border: none;
     background: transparent;
-    padding: 6px 14px;
+    padding: 6px 12px;
     border-radius: var(--radius-sm);
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     font-weight: 600;
-    color: #64748b;
+    color: #475569;
     cursor: pointer;
     transition: var(--transition);
 }
@@ -493,7 +502,7 @@
 .tab-count-pill {
     background: rgba(100, 116, 139, 0.15);
     color: inherit;
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 700;
     padding: 1px 6px;
     border-radius: 9999px;
@@ -502,6 +511,133 @@
 .active-filter .tab-count-pill {
     background: #e0f2fe;
     color: #0369a1;
+}
+
+/* Hub Controls Grid: Search Object (BEFORE) + Picklist Dropdown + Button */
+.hub-fields-row {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+    overflow: visible;
+    position: relative;
+    z-index: 60;
+    flex-wrap: wrap;
+}
+
+.hub-col {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.hub-search-col {
+    flex: 1.1;
+    min-width: 260px;
+}
+
+.hub-dropdown-col {
+    flex: 1.5;
+    min-width: 320px;
+    position: relative;
+    z-index: 70;
+    overflow: visible;
+}
+
+.hub-action-col {
+    flex: 0 0 auto;
+    align-self: flex-start;
+}
+
+.hub-field-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hub-label-blank {
+    visibility: hidden;
+}
+
+.field-icon-lead {
+    --slds-c-icon-color-foreground-default: #0284c7;
+}
+
+.hub-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.hub-search-input {
+    width: 100%;
+    padding: 8px 36px 8px 12px;
+    border: 1.5px solid #94a3b8;
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    background: #ffffff;
+    height: 38px;
+    box-sizing: border-box;
+    transition: var(--transition);
+    outline: none;
+}
+
+.hub-search-input:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2);
+}
+
+.clear-search-btn {
+    position: absolute;
+    right: 8px;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.clear-search-btn:hover {
+    color: #0f172a;
+}
+
+/* Picklist Dropdown Container */
+.hub-combobox-wrap {
+    position: relative;
+    z-index: 80;
+    width: 100%;
+    overflow: visible;
+}
+
+.hub-combobox-control {
+    width: 100%;
+}
+
+/* Subtext / Helper indicators */
+.field-help-text {
+    font-size: 0.78rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.info-icon-small {
+    --slds-c-icon-color-foreground-default: #0284c7;
+}
+
+.btn-hub-continue {
+    --slds-c-button-brand-color-background: #0284c7;
+    --slds-c-button-brand-color-background-hover: #0369a1;
+    font-weight: 700;
+    height: 38px;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
 }
 
 /* Responsive Objects Grid Container */
@@ -1183,8 +1319,49 @@
 .modal-header-styled {
     background: var(--primary-gradient);
     color: #ffffff;
-    padding: 18px 24px;
-    border-radius: 8px 8px 0 0;
+    padding: 20px 24px;
+    border-radius: 10px 10px 0 0;
+    position: relative; /* Anchor for custom close button */
+}
+
+/* Custom In-Header Close Button (Crisp contrast, perfectly aligned inside header) */
+.modal-custom-close-btn {
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    padding: 0;
+    z-index: 100;
+}
+
+.modal-custom-close-btn:hover {
+    background: rgba(255, 255, 255, 0.35);
+    border-color: rgba(255, 255, 255, 0.7);
+    transform: scale(1.08);
+}
+
+.modal-custom-close-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.5);
+}
+
+.modal-close-icon {
+    --slds-c-icon-color-foreground-default: #ffffff;
+    --slds-c-icon-color-foreground: #ffffff;
+}
+
+/* Hide any stray default SLDS outer close button */
+.slds-modal__close {
+    display: none !important;
 }
 
 .modal-title {
@@ -1446,8 +1623,27 @@
     .hero-selected-callout {
         min-width: 100%;
     }
-    .explorer-toolbar {
-        padding: 12px 20px;
+    .explorer-selection-hub {
+        padding: 16px 20px;
+    }
+    .hub-card-panel {
+        padding: 16px 18px;
+    }
+    .hub-fields-row {
+        flex-direction: column;
+        gap: 14px;
+    }
+    .hub-search-col,
+    .hub-dropdown-col,
+    .hub-action-col {
+        width: 100%;
+        min-width: 100%;
+    }
+    .hub-label-blank {
+        display: none;
+    }
+    .btn-hub-continue {
+        width: 100%;
     }
     .objects-grid-container {
         padding: 16px 20px 80px 20px;
@@ -1491,13 +1687,10 @@
         width: 100%;
         justify-content: space-between;
     }
-    .explorer-toolbar {
+    .hub-header-row {
         flex-direction: column;
         align-items: stretch;
         gap: 12px;
-    }
-    .toolbar-search-box {
-        max-width: 100%;
     }
     .toolbar-filter-tabs {
         justify-content: space-between;
@@ -1566,5 +1759,26 @@
     }
     .hero-headline {
         font-size: 1.35rem;
+    }
+    .hub-main-title {
+        font-size: 1.15rem;
+    }
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .printable-doc-sheet, .printable-doc-sheet * {
+        visibility: visible;
+    }
+    .printable-doc-sheet {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
     }
 }

@@ -464,12 +464,11 @@ export default class UserRecordTablePdf extends LightningElement {
 
     handleDownloadFromPreview() {
         this.handleClosePreviewModal();
-        this.handleDirectDownloadPdf();
+        this.handleOpenExportModal();
     }
 
     handleDirectDownloadPdf() {
-        this.updateDefaultPdfTitle();
-        this.handleConfirmDownloadPdf();
+        this.handleOpenExportModal();
     }
 
     async handleConfirmDownloadPdf() {
