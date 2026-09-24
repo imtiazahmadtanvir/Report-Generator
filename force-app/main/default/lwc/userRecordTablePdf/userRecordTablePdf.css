@@ -1322,6 +1322,7 @@
     padding: 20px 24px;
     border-radius: 10px 10px 0 0;
     position: relative; /* Anchor for custom close button */
+    text-align: center;
 }
 
 /* Custom In-Header Close Button (Crisp contrast, perfectly aligned inside header) */
@@ -1366,16 +1367,22 @@
 
 .modal-title {
     color: #ffffff;
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     font-weight: 700;
     display: flex;
     align-items: center;
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    margin: 0 auto;
 }
 
 .modal-subtitle {
     color: #cbd5e1;
     font-size: 0.82rem;
-    margin: 4px 0 0 0;
+    margin: 6px auto 0 auto;
+    text-align: center;
+    width: 100%;
 }
 
 .modal-body-styled {
