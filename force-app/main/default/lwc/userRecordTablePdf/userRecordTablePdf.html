@@ -1,0 +1,771 @@
+<template>
+    <div class="slds-card modern-app-wrapper">
+        <!-- ============================================================== -->
+        <!-- EXECUTIVE APP HEADER                                           -->
+        <!-- ============================================================== -->
+        <header class="executive-header">
+            <div class="header-left">
+                <div class="user-avatar-container">
+                    <template lwc:if={userInfo.smallPhotoUrl}>
+                        <img src={userInfo.smallPhotoUrl} alt={userInfo.name} class="user-avatar-img" />
+                    </template>
+                    <template lwc:else>
+                        <div class="user-avatar-fallback">{userInitials}</div>
+                    </template>
+                    <div class="online-indicator" title="Logged In"></div>
+                </div>
+                <div class="user-meta">
+                    <div class="greeting-row">
+                        <span class="greeting-text">Welcome back,</span>
+                        <span class="user-name">{userInfo.name}</span>
+                        <span class="profile-badge">{userInfo.profileName}</span>
+                    </div>
+                    <div class="user-subtext">
+                        <span class="user-subtext-item">
+                            <lightning-icon icon-name="utility:email" size="xx-small" class="subtext-icon"></lightning-icon>
+                            <span>{userInfo.email}</span>
+                        </span>
+                        <span class="bullet-sep">•</span>
+                        <span class="user-subtext-item">
+                            <lightning-icon icon-name="utility:company" size="xx-small" class="subtext-icon"></lightning-icon>
+                            <span>{userInfo.orgName}</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WORKFLOW STEPPER -->
+            <div class="workflow-stepper">
+                <div class={step1BubbleClass}>
+                    <span class="step-num">1</span>
+                    <span class="step-label">Select Object</span>
+                </div>
+                <div class="step-divider"></div>
+                <div class={step2BubbleClass}>
+                    <span class="step-num">2</span>
+                    <span class="step-label">Configure Columns & PDF</span>
+                </div>
+            </div>
+
+            <!-- TOP RIGHT ACTIONS (Available in Step 2) -->
+            <div class="header-actions">
+                <template lwc:if={isStep2}>
+                    <div class="action-btn-cluster">
+                        <lightning-button
+                            label="Refresh"
+                            icon-name="utility:refresh"
+                            onclick={handleRefresh}
+                            disabled={isLoading}
+                            class="action-btn-glass">
+                        </lightning-button>
+                        <lightning-button
+                            label="Preview PDF"
+                            icon-name="utility:preview"
+                            onclick={handleOpenPreviewModal}
+                            disabled={isTableEmpty}
+                            class="action-btn-glass">
+                        </lightning-button>
+                        <lightning-button
+                            label="Download PDF"
+                            variant="brand"
+                            icon-name="utility:download"
+                            onclick={handleDirectDownloadPdf}
+                            disabled={isTableEmpty}
+                            class="action-btn-cta">
+                        </lightning-button>
+                        <lightning-button-icon
+                            icon-name="utility:settings"
+                            alternative-text="PDF Settings"
+                            title="Configure PDF Options"
+                            onclick={handleOpenExportModal}
+                            disabled={isTableEmpty}
+                            variant="border-filled"
+                            class="btn-icon-settings">
+                        </lightning-button-icon>
+                    </div>
+                </template>
+            </div>
+        </header>
+
+        <!-- ============================================================== -->
+        <!-- STEP 1: FULL-WIDTH OBJECT CATALOG EXPLORER (NO EMPTY SPACE!)   -->
+        <!-- ============================================================== -->
+        <template lwc:if={isStep1}>
+            <div class="step1-fullpage-view">
+                <!-- EXPLORER HERO BANNER -->
+                <div class="explorer-hero-strip">
+                    <div class="hero-text-col">
+                        <div class="hero-badge">
+                            <lightning-icon icon-name="utility:database" size="xx-small" class="hero-badge-icon"></lightning-icon>
+                            <span>STEP 1 OF 2 • OBJECT SELECTION</span>
+                        </div>
+                        <h1 class="hero-headline">Select the Salesforce Object</h1>
+                        <p class="hero-subline">
+                            Search or choose from all <strong>{countAll} accessible objects</strong> in your Salesforce organization. Choose an object to explore its live fields, view records, and generate multi-page PDF exports.
+                        </p>
+                    </div>
+
+                    <!-- Selected Object Callout -->
+                    <div class="hero-selected-callout">
+                        <div class="callout-inner">
+                            <span class="callout-label">Currently Selected:</span>
+                            <div class="callout-object-name">
+                                <lightning-icon icon-name="standard:record" size="small" class="callout-icon"></lightning-icon>
+                                <span>{selectedObjectLabel}</span>
+                                <span class={selectedObjectBadgeClass}>{selectedObjectBadgeText}</span>
+                            </div>
+                            <span class="callout-api-name">API Name: {selectedObject}</span>
+                            <button class="callout-action-btn" onclick={handleProceedToStep2}>
+                                <span>Select Object & Continue</span>
+                                <lightning-icon icon-name="utility:forward" size="xx-small" class="slds-m-left_x-small"></lightning-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FULL-WIDTH SEARCH & DROPDOWN SELECTION HUB -->
+                <div class="explorer-selection-hub">
+                    <div class="hub-controls-row">
+                        <!-- 1. Real-time Search Box -->
+                        <div class="hub-field-cell hub-search-cell">
+                            <label class="hub-field-label">
+                                <lightning-icon icon-name="utility:search" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                                Search Objects (Live Filter)
+                            </label>
+                            <div class="hub-search-input-box">
+                                <input
+                                    type="text"
+                                    placeholder="Type to search any object (e.g. Account, Contact, Lead, Custom_Obj__c)..."
+                                    value={objectFilterSearch}
+                                    oninput={handleObjectSearchInput}
+                                    class="hub-search-input" />
+                                <template lwc:if={objectFilterSearch}>
+                                    <button class="clear-search-btn" onclick={handleClearObjectSearch} title="Clear Search">✕</button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- 2. Choose Salesforce Object Dropdown -->
+                        <div class="hub-field-cell hub-dropdown-cell">
+                            <label class="hub-field-label">
+                                <lightning-icon icon-name="utility:down" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                                Choose Salesforce Object ({filteredDropdownOptions.length} available)
+                            </label>
+                            <lightning-combobox
+                                name="objectSelectorCombobox"
+                                variant="label-hidden"
+                                placeholder="Choose an accessible object..."
+                                value={selectedObject}
+                                options={filteredDropdownOptions}
+                                onchange={handleDropdownChange}
+                                class="hub-combobox">
+                            </lightning-combobox>
+                        </div>
+
+                        <!-- 3. Primary CTA Button -->
+                        <div class="hub-field-cell hub-action-cell">
+                            <lightning-button
+                                variant="brand"
+                                label="Select Object & Continue →"
+                                icon-name="utility:forward"
+                                icon-position="right"
+                                onclick={handleProceedToStep2}
+                                class="btn-hub-cta">
+                            </lightning-button>
+                        </div>
+                    </div>
+
+                    <!-- Category Filter Tabs & Quick Info -->
+                    <div class="hub-subbar-row">
+                        <div class="toolbar-filter-tabs">
+                            <button class={allTabClass} data-category="all" onclick={handleSelectCategory}>
+                                <span>All Objects</span>
+                                <span class="tab-count-pill">{countAll}</span>
+                            </button>
+                            <button class={standardTabClass} data-category="standard" onclick={handleSelectCategory}>
+                                <span>Standard</span>
+                                <span class="tab-count-pill">{countStandard}</span>
+                            </button>
+                            <button class={customTabClass} data-category="custom" onclick={handleSelectCategory}>
+                                <span>Custom Objects</span>
+                                <span class="tab-count-pill">{countCustom}</span>
+                            </button>
+                        </div>
+
+                        <div class="hub-quick-tip">
+                            <lightning-icon icon-name="utility:info_alt" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                            <span>Select via dropdown or click any card below (double-click to jump directly to records)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OBJECT CARDS FULL-PAGE RESPONSIVE GRID -->
+                <div class="objects-grid-container">
+                    <template lwc:if={isLoadingObjects}>
+                        <div class="loading-state-container">
+                            <lightning-spinner alternative-text="Loading objects catalog..." size="medium"></lightning-spinner>
+                            <span class="loading-label">Loading all accessible Salesforce objects...</span>
+                        </div>
+                    </template>
+
+                    <template lwc:else>
+                        <div class="responsive-objects-grid">
+                            <template for:each={filteredObjectCards} for:item="obj">
+                                <div
+                                    key={obj.value}
+                                    class={obj.cardClass}
+                                    data-object={obj.value}
+                                    onclick={handleCardSelect}
+                                    ondblclick={handleCardDoubleClick}
+                                    tabindex="0">
+                                    <div class="card-top-row">
+                                        <div class={obj.iconBg}>
+                                            <lightning-icon icon-name={obj.icon} size="small" variant="inverse"></lightning-icon>
+                                        </div>
+                                        <span class={obj.badgeClass}>{obj.typeBadge}</span>
+                                    </div>
+
+                                    <div class="card-info">
+                                        <h3 class="card-object-label" title={obj.label}>{obj.label}</h3>
+                                        <span class="card-object-api" title={obj.value}>{obj.value}</span>
+                                    </div>
+
+                                    <div class="card-bottom-row">
+                                        <template lwc:if={obj.isSelected}>
+                                            <div class="selected-state-indicator">
+                                                <lightning-icon icon-name="utility:check" size="xx-small" class="selected-check"></lightning-icon>
+                                                <span>Selected</span>
+                                            </div>
+                                        </template>
+                                        <template lwc:else>
+                                            <span class="click-to-select-text">Click to Select</span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- STICKY BOTTOM ACTION STRIP -->
+                <div class="explorer-bottom-bar">
+                    <div class="bottom-bar-left">
+                        <span class="bottom-selected-label">Selected Object:</span>
+                        <strong class="bottom-selected-name">{selectedObjectLabel}</strong>
+                        <span class="bottom-selected-api">({selectedObject})</span>
+                        <span class={selectedObjectBadgeClass}>{selectedObjectBadgeText}</span>
+                    </div>
+                    <div class="bottom-bar-right">
+                        <lightning-button
+                            variant="brand"
+                            label="Select Object & Continue →"
+                            icon-name="utility:forward"
+                            icon-position="right"
+                            onclick={handleProceedToStep2}
+                            class="btn-proceed-cta">
+                        </lightning-button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- ============================================================== -->
+        <!-- STEP 2: FULL-WIDTH DATA TABLE, COLUMN CONFIG & PDF             -->
+        <!-- ============================================================== -->
+        <template lwc:if={isStep2}>
+            <div class="step2-data-view">
+                <!-- SELECTED OBJECT HEADER BANNER -->
+                <div class="object-summary-ribbon">
+                    <div class="summary-ribbon-left">
+                        <div class="summary-object-icon">
+                            <lightning-icon icon-name="standard:record" size="medium"></lightning-icon>
+                        </div>
+                        <div class="summary-object-meta">
+                            <div class="summary-title-line">
+                                <h1 class="summary-object-heading">{selectedObjectLabel}</h1>
+                                <span class="summary-api-name">({selectedObject})</span>
+                                <span class={selectedObjectBadgeClass}>{selectedObjectBadgeText}</span>
+                            </div>
+                            <div class="summary-stats-line">
+                                <span class="stat-item">Total Records: <strong>{totalCount}</strong></span>
+                                <template lwc:if={hasOwnerField}>
+                                    <span class="bullet-sep">•</span>
+                                    <span class="stat-item">My Records: <strong class="text-accent">{myRecordCount}</strong></span>
+                                </template>
+                                <span class="bullet-sep">•</span>
+                                <span class="stat-item">Active Columns: <strong>{columns.length}</strong></span>
+                                <span class="bullet-sep">•</span>
+                                <span class="stat-item">PDF Engine: <strong class="text-success">Multi-Page v2.0 (15 rows/page)</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="summary-ribbon-right">
+                        <lightning-button
+                            label="← Change Object"
+                            variant="neutral"
+                            icon-name="utility:back"
+                            onclick={handleBackToStep1}
+                            class="action-btn-neutral">
+                        </lightning-button>
+                    </div>
+                </div>
+
+                <!-- COLUMN SEQUENCE & REORDERING BAR -->
+                <div class="column-sequence-panel">
+                    <div class="column-sequence-header">
+                        <div class="sequence-title-group">
+                            <lightning-icon icon-name="utility:table" size="x-small" class="sequence-icon"></lightning-icon>
+                            <div>
+                                <h3 class="sequence-heading">Column Sequence & PDF Order</h3>
+                                <p class="sequence-subtext">Columns will appear in the table and downloaded PDF in this exact order (1st, 2nd, 3rd...). Use ◀ ▶ to reorder.</p>
+                            </div>
+                        </div>
+                        <div class="sequence-actions-group">
+                            <lightning-button
+                                label="Choose & Reorder Columns"
+                                icon-name="utility:custom_apps"
+                                onclick={handleOpenColumnModal}
+                                variant="brand-outline"
+                                class="btn-choose-columns">
+                            </lightning-button>
+                        </div>
+                    </div>
+
+                    <!-- Column Cards Track -->
+                    <div class="columns-horizontal-track">
+                        <template for:each={orderedColumnChips} for:item="col">
+                            <div key={col.fieldName} class="column-pill-card">
+                                <div class="col-pill-badge">{col.orderBadge}</div>
+                                <span class="col-pill-label" title={col.fieldName}>{col.label}</span>
+                                <div class="col-pill-arrows">
+                                    <button
+                                        class="arrow-btn"
+                                        title="Move Earlier (Left)"
+                                        data-index={col.index}
+                                        disabled={col.isFirst}
+                                        onclick={handleMoveColumnUp}>
+                                        ◀
+                                    </button>
+                                    <button
+                                        class="arrow-btn"
+                                        title="Move Later (Right)"
+                                        data-index={col.index}
+                                        disabled={col.isLast}
+                                        onclick={handleMoveColumnDown}>
+                                        ▶
+                                    </button>
+                                    <button
+                                        class="remove-btn"
+                                        title="Remove Column"
+                                        data-field={col.fieldName}
+                                        onclick={handleRemoveColumn}>
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+
+                        <button class="add-col-btn" onclick={handleOpenColumnModal} title="Add More Columns">
+                            <lightning-icon icon-name="utility:add" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                            <span>+ Add Column</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TABLE TOOLBAR: SCOPE TOGGLE & SEARCH -->
+                <div class="table-action-toolbar">
+                    <div class="toolbar-left-stats">
+                        <template lwc:if={hasSelectedRows}>
+                            <div class="metric-pill metric-pill-highlight">
+                                <lightning-icon icon-name="utility:check" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                                <span><strong>{selectedRowsCount}</strong> records selected for PDF</span>
+                            </div>
+                            <button class="link-btn-clear" onclick={handleClearSelection}>Clear Selection</button>
+                        </template>
+                        <template lwc:else>
+                            <div class="metric-pill">
+                                <span>Showing <strong>{filteredRecordCount}</strong> records</span>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="toolbar-right-controls">
+                        <!-- Scope Toggle -->
+                        <template lwc:if={hasOwnerField}>
+                            <div class="scope-toggle-pills">
+                                <button class={myRecordsBtnClass} onclick={handleScopeMyRecords}>
+                                    <lightning-icon icon-name="utility:user" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                                    My Records
+                                </button>
+                                <button class={allRecordsBtnClass} onclick={handleScopeAllRecords}>
+                                    <lightning-icon icon-name="utility:groups" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                                    All Records
+                                </button>
+                            </div>
+                        </template>
+
+                        <!-- Search Input -->
+                        <div class="table-search-wrapper">
+                            <lightning-input
+                                type="search"
+                                variant="label-hidden"
+                                placeholder={searchPlaceholder}
+                                value={searchTerm}
+                                onchange={handleSearchChange}
+                                class="table-search-input">
+                            </lightning-input>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DATA TABLE CONTAINER -->
+                <div class="table-full-container">
+                    <template lwc:if={isLoading}>
+                        <div class="table-spinner-overlay">
+                            <lightning-spinner alternative-text="Loading records..." size="medium"></lightning-spinner>
+                        </div>
+                    </template>
+
+                    <template lwc:if={hasRecords}>
+                        <div class="datatable-scroll-pane">
+                            <lightning-datatable
+                                key-field="Id"
+                                data={paginatedRecords}
+                                columns={columns}
+                                selected-rows={selectedRowIds}
+                                onrowselection={handleRowSelection}
+                                sorted-by={sortedBy}
+                                sorted-direction={sortedDirection}
+                                onsort={handleSort}
+                                class="slds-table_bordered modern-datatable">
+                            </lightning-datatable>
+                        </div>
+
+                        <!-- RESPONSIVE PAGINATION BAR (15 RECORDS PER PAGE) -->
+                        <div class="responsive-pagination-footer">
+                            <div class="pagination-count-label">
+                                Showing <strong>{recordRangeStart}</strong> - <strong>{recordRangeEnd}</strong> of <strong>{filteredRecordCount}</strong> records
+                            </div>
+
+                            <div class="pagination-right-group">
+                                <div class="page-size-selector">
+                                    <span class="page-size-text">Rows per page:</span>
+                                    <select class="custom-page-select" onchange={handlePageSizeChange}>
+                                        <option value="10">10</option>
+                                        <option value="15" selected>15</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+
+                                <lightning-button-icon
+                                    icon-name="utility:chevronleft"
+                                    alternative-text="Previous Page"
+                                    onclick={handlePrevPage}
+                                    disabled={isFirstPage}
+                                    variant="border-filled"
+                                    size="small">
+                                </lightning-button-icon>
+
+                                <span class="page-indicator-badge">
+                                    Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong>
+                                </span>
+
+                                <lightning-button-icon
+                                    icon-name="utility:chevronright"
+                                    alternative-text="Next Page"
+                                    onclick={handleNextPage}
+                                    disabled={isLastPage}
+                                    variant="border-filled"
+                                    size="small">
+                                </lightning-button-icon>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Empty State -->
+                    <template lwc:if={isTableEmpty}>
+                        <div class="empty-state-card">
+                            <div class="empty-circle-icon">
+                                <lightning-icon icon-name="utility:search" size="large"></lightning-icon>
+                            </div>
+                            <h3 class="empty-title">No records found</h3>
+                            <p class="empty-text">No {selectedObjectLabel} records match your search or filter criteria.</p>
+                            <template lwc:if={searchTerm}>
+                                <lightning-button label="Clear Search" onclick={handleClearSearch} class="slds-m-top_small"></lightning-button>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+
+        <!-- ============================================================== -->
+        <!-- CHOOSE & ORDER COLUMNS MODAL (DUAL LISTBOX)                    -->
+        <!-- ============================================================== -->
+        <template lwc:if={isColumnModalOpen}>
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_medium">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header modal-header-styled">
+                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={handleCloseColumnModal}>
+                            <lightning-icon icon-name="utility:close" size="small" variant="inverse"></lightning-icon>
+                            <span class="slds-assistive-text">Close</span>
+                        </button>
+                        <h2 class="slds-modal__title modal-title">
+                            <lightning-icon icon-name="utility:table" size="small" class="slds-m-right_x-small" variant="inverse"></lightning-icon>
+                            Select & Order Columns ({selectedObjectLabel})
+                        </h2>
+                        <p class="slds-m-top_x-small modal-subtitle">
+                            Choose fields to display. Fields ordered in the right list will become 1st column, 2nd column, etc. in your table and PDF!
+                        </p>
+                    </header>
+
+                    <div class="slds-modal__content slds-p-around_medium modal-body-styled">
+                        <div class="column-modal-presets">
+                            <span class="presets-label">Quick Actions:</span>
+                            <button class="preset-btn" onclick={handleResetDefaultFields}>Reset to Default Fields</button>
+                            <button class="preset-btn" onclick={handleSelectAllFields}>Select All Fields</button>
+                        </div>
+
+                        <div class="slds-m-top_small dual-listbox-wrapper">
+                            <lightning-dual-listbox
+                                name="columnsSelector"
+                                label="Column Field Selection"
+                                source-label="Available Fields (User Accessible)"
+                                selected-label="Selected Columns (1st, 2nd, 3rd in sequence)"
+                                options={dualListboxOptions}
+                                value={tempSelectedFieldNames}
+                                onchange={handleDualListboxChange}
+                                size="9"
+                                required>
+                            </lightning-dual-listbox>
+                        </div>
+                    </div>
+
+                    <footer class="slds-modal__footer">
+                        <lightning-button label="Cancel" onclick={handleCloseColumnModal} class="slds-m-right_small"></lightning-button>
+                        <lightning-button
+                            variant="brand"
+                            label="Apply Columns"
+                            icon-name="utility:check"
+                            onclick={handleApplyColumns}>
+                        </lightning-button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+        <!-- ============================================================== -->
+        <!-- DOWNLOAD PDF MODAL                                             -->
+        <!-- ============================================================== -->
+        <template lwc:if={isExportModalOpen}>
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_small">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header modal-header-styled">
+                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={handleCloseExportModal}>
+                            <lightning-icon icon-name="utility:close" size="small" variant="inverse"></lightning-icon>
+                            <span class="slds-assistive-text">Close</span>
+                        </button>
+                        <h2 class="slds-modal__title modal-title">
+                            <lightning-icon icon-name="utility:download" size="small" class="slds-m-right_x-small" variant="inverse"></lightning-icon>
+                            Download PDF Export
+                        </h2>
+                        <p class="slds-m-top_x-small modal-subtitle">Configure your PDF report options and pagination.</p>
+                    </header>
+
+                    <div class="slds-modal__content slds-p-around_medium modal-body-styled">
+                        <div class="modal-summary-banner">
+                            <div class="summary-metric">
+                                <span class="summary-title">Object:</span>
+                                <span class="summary-val">{selectedObjectLabel}</span>
+                            </div>
+                            <div class="summary-metric">
+                                <span class="summary-title">Records to Export:</span>
+                                <span class="summary-val text-brand">{recordsToExport.length} records</span>
+                            </div>
+                            <div class="summary-metric">
+                                <span class="summary-title">PDF Pages:</span>
+                                <span class="summary-val text-brand">{pdfTotalPagesLabel}</span>
+                            </div>
+                            <div class="summary-metric">
+                                <span class="summary-title">Active Columns:</span>
+                                <span class="summary-val">{columns.length} columns</span>
+                            </div>
+                        </div>
+
+                        <div class="slds-form slds-m-top_medium">
+                            <lightning-input
+                                type="text"
+                                label="Document Title"
+                                value={pdfTitle}
+                                onchange={handlePdfTitleChange}
+                                class="slds-m-bottom_medium">
+                            </lightning-input>
+
+                            <div class="slds-grid slds-gutters slds-m-bottom_medium">
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-combobox
+                                        name="exportScope"
+                                        label="Records to Include in PDF"
+                                        value={exportScopeOption}
+                                        options={exportScopeOptions}
+                                        onchange={handleExportScopeChange}>
+                                    </lightning-combobox>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-combobox
+                                        name="pdfRowsPerPage"
+                                        label="Rows per Page in PDF"
+                                        value={pdfRowsPerPage}
+                                        options={pdfRowsPerPageOptions}
+                                        onchange={handlePdfRowsPerPageChange}>
+                                    </lightning-combobox>
+                                </div>
+                            </div>
+
+                            <div class="slds-grid slds-gutters slds-m-bottom_medium">
+                                <div class="slds-col slds-size_1-of-1">
+                                    <lightning-combobox
+                                        name="orientation"
+                                        label="Page Orientation"
+                                        value={pdfOrientation}
+                                        options={orientationOptions}
+                                        onchange={handleOrientationChange}>
+                                    </lightning-combobox>
+                                </div>
+                            </div>
+
+                            <div class="export-notice-box">
+                                <lightning-icon icon-name="utility:info_alt" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                                <span>With <strong>{recordsToExport.length} records</strong> and <strong>{pdfRowsPerPage} rows per page</strong>, the generated PDF will have exactly <strong>{pdfTotalPagesLabel}</strong>.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <footer class="slds-modal__footer">
+                        <lightning-button label="Cancel" onclick={handleCloseExportModal} class="slds-m-right_small"></lightning-button>
+                        <lightning-button
+                            variant="brand"
+                            label={exportButtonLabel}
+                            icon-name="utility:download"
+                            onclick={handleConfirmDownloadPdf}
+                            disabled={isDownloading}>
+                        </lightning-button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+        <!-- ============================================================== -->
+        <!-- PREVIEW PDF MODAL                                              -->
+        <!-- ============================================================== -->
+        <template lwc:if={isPreviewModalOpen}>
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_large">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header modal-header-styled">
+                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={handleClosePreviewModal}>
+                            <lightning-icon icon-name="utility:close" size="small" variant="inverse"></lightning-icon>
+                            <span class="slds-assistive-text">Close</span>
+                        </button>
+                        <h2 class="slds-modal__title modal-title">
+                            <lightning-icon icon-name="utility:preview" size="small" class="slds-m-right_x-small" variant="inverse"></lightning-icon>
+                            Preview PDF Report ({selectedObjectLabel} • {previewPages.length} Pages)
+                        </h2>
+                        <p class="slds-m-top_x-small modal-subtitle">
+                            Preview of PDF document with {pdfRowsPerPage} rows per page. Showing {recordsToExport.length} records across {previewPages.length} pages.
+                        </p>
+                    </header>
+
+                    <div class="slds-modal__content slds-p-around_medium print-preview-body">
+                        <!-- Multi-page Preview Sheets -->
+                        <template for:each={previewPages} for:item="pg">
+                            <div key={pg.pageNumber} class="printable-doc-sheet slds-m-bottom_large" id="printable-doc">
+                                <!-- Page 1 Full Header / Subsequent Page Mini Header -->
+                                <template lwc:if={pg.isFirstPage}>
+                                    <div class="doc-header-banner">
+                                        <div class="doc-title-row">
+                                            <h1 class="doc-title">{pdfTitle}</h1>
+                                            <span class="doc-badge">{selectedObjectLabel}</span>
+                                        </div>
+                                        <div class="doc-meta-grid">
+                                            <div class="doc-meta-item">
+                                                <span class="doc-meta-label">Generated By</span>
+                                                <span class="doc-meta-val">{userInfo.name} ({userInfo.profileName})</span>
+                                                <span class="doc-meta-sub">{userInfo.email}</span>
+                                            </div>
+                                            <div class="doc-meta-item">
+                                                <span class="doc-meta-label">Organization</span>
+                                                <span class="doc-meta-val">{userInfo.orgName}</span>
+                                                <span class="doc-meta-sub">Scope: {currentScopeLabel}</span>
+                                            </div>
+                                            <div class="doc-meta-item">
+                                                <span class="doc-meta-label">Export Date & Time</span>
+                                                <span class="doc-meta-val">{currentDateFormatted}</span>
+                                                <span class="doc-meta-sub">{recordsToExport.length} Records • Page {pg.pageNumber} of {pg.totalPages}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template lwc:else>
+                                    <div class="doc-subsequent-header">
+                                        <span class="doc-subsequent-title">{pdfTitle} - {selectedObjectLabel} (Continued)</span>
+                                        <span class="doc-subsequent-page">Page {pg.pageNumber} of {pg.totalPages}</span>
+                                    </div>
+                                </template>
+
+                                <!-- Table with records on this specific page -->
+                                <div class="doc-table-wrapper">
+                                    <table class="doc-preview-table">
+                                        <thead>
+                                            <tr>
+                                                <template for:each={columns} for:item="col">
+                                                    <th key={col.fieldName}>{col.label}</th>
+                                                </template>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template for:each={pg.records} for:item="row">
+                                                <tr key={row.Id}>
+                                                    <template for:each={row.cells} for:item="cell">
+                                                        <td key={cell.field}>{cell.value}</td>
+                                                    </template>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Page Footer -->
+                                <div class="doc-footer-row">
+                                    <span>Confidential - Internal Salesforce Document</span>
+                                    <span class="page-indicator-text">Page {pg.pageNumber} of {pg.totalPages} ({pg.records.length} records on this page)</span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <footer class="slds-modal__footer">
+                        <lightning-button label="Close Preview" onclick={handleClosePreviewModal} class="slds-m-right_small"></lightning-button>
+                        <lightning-button
+                            label="System Print"
+                            icon-name="utility:print"
+                            onclick={handleSystemPrint}
+                            class="slds-m-right_small">
+                        </lightning-button>
+                        <lightning-button
+                            variant="brand"
+                            label="Download PDF File"
+                            icon-name="utility:download"
+                            onclick={handleDownloadFromPreview}>
+                        </lightning-button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+    </div>
+</template>
