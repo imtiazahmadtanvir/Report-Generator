@@ -283,6 +283,36 @@ export function generatePdfBlob(config) {
 }
 
 /**
+ * Pure JavaScript Client-Side CSV Generator
+ * Compliant with RFC 4180 and Microsoft Excel UTF-8 BOM
+ */
+export function generateCsvBlob(columns = [], records = []) {
+    function escapeCsvValue(val) {
+        if (val === null || val === undefined) return '';
+        const str = String(val);
+        if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+            return '"' + str.replace(/"/g, '""') + '"';
+        }
+        return str;
+    }
+
+    // 1. Header row with active column labels
+    const headers = columns.map(c => escapeCsvValue(c.label || c.fieldName)).join(',');
+
+    // 2. Data rows with values matching column fieldNames
+    const rows = records.map(record => {
+        return columns.map(col => {
+            const val = record[col.fieldName];
+            return escapeCsvValue(val);
+        }).join(',');
+    });
+
+    // 3. Prepend \uFEFF Byte Order Mark for Excel UTF-8 compatibility
+    const csvContent = '\uFEFF' + [headers, ...rows].join('\r\n');
+    return new Blob([csvContent], { type: 'application/octet-stream' });
+}
+
+/**
  * Trigger immediate browser file download
  */
 export function downloadBlobAsFile(blob, filename) {

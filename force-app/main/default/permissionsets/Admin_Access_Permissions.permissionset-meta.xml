@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Admin Access Console Permission</label>
+    <description>Grants access to the Admin Access Console Apex controllers and custom tabs.</description>
+    <classAccesses>
+        <apexClass>AdminAccessController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>AdminSecurityService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>AdminSecurityDataModel</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>UserRecordPdfController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <applicationVisibilities>
+        <application>Report_Admin_System</application>
+        <visible>true</visible>
+    </applicationVisibilities>
+    <tabSettings>
+        <tab>Admin_Access</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
+        <tab>User_Record_PDF_Exporter</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+</PermissionSet>

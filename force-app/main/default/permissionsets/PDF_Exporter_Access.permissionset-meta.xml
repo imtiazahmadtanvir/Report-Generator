@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
     <hasActivationRequired>false</hasActivationRequired>
-    <label>PDF Exporter User Access</label>
-    <description>Grants access to UserRecordPdfController Apex class and PDF Exporter Tab.</description>
+    <label>Report Generator User Access</label>
+    <description>Grants access to UserRecordPdfController Apex class and Report Generator Tab.</description>
     <classAccesses>
         <apexClass>UserRecordPdfController</apexClass>
         <enabled>true</enabled>

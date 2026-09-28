@@ -3,14 +3,14 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
-                <componentName>userRecordTablePdf</componentName>
-                <identifier>c_userRecordTablePdf</identifier>
+                <componentName>adminAccess</componentName>
+                <identifier>c_adminAccess</identifier>
             </componentInstance>
         </itemInstances>
         <name>main</name>
         <type>Region</type>
     </flexiPageRegions>
-    <masterLabel>Report Generator</masterLabel>
+    <masterLabel>Admin Access</masterLabel>
     <template>
         <name>flexipage:defaultAppHomeTemplate</name>
     </template>

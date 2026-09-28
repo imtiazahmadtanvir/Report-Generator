@@ -3,7 +3,7 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getLoggedInUserInfo from '@salesforce/apex/UserRecordPdfController.getLoggedInUserInfo';
 import getAllAccessibleObjects from '@salesforce/apex/UserRecordPdfController.getAllAccessibleObjects';
 import getDynamicObjectRecords from '@salesforce/apex/UserRecordPdfController.getDynamicObjectRecords';
-import { generatePdfBlob, downloadBlobAsFile } from './pdfBuilder';
+import { generatePdfBlob, generateCsvBlob, downloadBlobAsFile } from './pdfBuilder';
 
 export default class UserRecordTablePdf extends LightningElement {
     // Current logged-in user information
@@ -58,7 +58,8 @@ export default class UserRecordTablePdf extends LightningElement {
     @track isExportModalOpen = false;
     @track isPreviewModalOpen = false;
 
-    // PDF Export Options
+    // PDF & CSV Export Options
+    @track exportFormat = 'pdf'; // 'pdf' or 'csv'
     @track pdfTitle = '';
     @track pdfOrientation = 'landscape';
     @track exportScopeOption = 'auto';
@@ -471,6 +472,10 @@ export default class UserRecordTablePdf extends LightningElement {
         this.handleOpenExportModal();
     }
 
+    handleExportFormatChange(event) {
+        this.exportFormat = event.detail.value;
+    }
+
     async handleConfirmDownloadPdf() {
         this.isDownloading = true;
         try {
@@ -481,35 +486,45 @@ export default class UserRecordTablePdf extends LightningElement {
                 return;
             }
 
-            const cleanScopeLabel = this.exportScopeOption === 'selected' || (this.exportScopeOption === 'auto' && this.hasSelectedRows)
-                ? `Selected (${recordsToExport.length} Records)`
-                : (this.hasOwnerField && this.onlyMyRecords ? 'My Records' : 'All Records');
-
-            const rpp = parseInt(this.pdfRowsPerPage, 10) || 15;
-
-            const pdfBlob = generatePdfBlob({
-                title: this.pdfTitle,
-                objectLabel: this.selectedObjectLabel,
-                orientation: this.pdfOrientation,
-                columns: this.columns,
-                records: recordsToExport,
-                userInfo: this.userInfo,
-                scopeLabel: cleanScopeLabel,
-                rowsPerPage: rpp // Strictly 15 per page!
-            });
-
             const timestamp = new Date().toISOString().slice(0, 10);
-            const sanitizedTitle = (this.pdfTitle || 'Salesforce_Report').replace(/[^a-zA-Z0-9_-]/g, '_');
-            const filename = `${sanitizedTitle}_${timestamp}.pdf`;
+            const sanitizedTitle = (this.pdfTitle || `${this.selectedObjectLabel}_Report`).replace(/[^a-zA-Z0-9_-]/g, '_');
 
-            downloadBlobAsFile(pdfBlob, filename);
+            if (this.isFormatCsv) {
+                // Generate CSV Spreadsheet
+                const csvBlob = generateCsvBlob(this.columns, recordsToExport);
+                const filename = `${sanitizedTitle}_${timestamp}.csv`;
+                downloadBlobAsFile(csvBlob, filename);
+                this.showToast('Success', `Downloaded ${filename} successfully (${recordsToExport.length} records)!`, 'success');
+            } else {
+                // Generate Multi-Page PDF Document
+                const cleanScopeLabel = this.exportScopeOption === 'selected' || (this.exportScopeOption === 'auto' && this.hasSelectedRows)
+                    ? `Selected (${recordsToExport.length} Records)`
+                    : (this.hasOwnerField && this.onlyMyRecords ? 'My Records' : 'All Records');
 
-            const totalPgs = Math.max(1, Math.ceil(recordsToExport.length / rpp));
-            this.showToast('Success', `Downloaded ${filename} successfully (${totalPgs} pages)!`, 'success');
+                const rpp = parseInt(this.pdfRowsPerPage, 10) || 15;
+
+                const pdfBlob = generatePdfBlob({
+                    title: this.pdfTitle,
+                    objectLabel: this.selectedObjectLabel,
+                    orientation: this.pdfOrientation,
+                    columns: this.columns,
+                    records: recordsToExport,
+                    userInfo: this.userInfo,
+                    scopeLabel: cleanScopeLabel,
+                    rowsPerPage: rpp
+                });
+
+                const filename = `${sanitizedTitle}_${timestamp}.pdf`;
+                downloadBlobAsFile(pdfBlob, filename);
+
+                const totalPgs = Math.max(1, Math.ceil(recordsToExport.length / rpp));
+                this.showToast('Success', `Downloaded ${filename} successfully (${totalPgs} pages)!`, 'success');
+            }
+
             this.handleCloseExportModal();
         } catch (error) {
-            console.error('PDF Generation Error:', error);
-            this.showToast('Error', 'Failed to generate PDF: ' + (error.message || error), 'error');
+            console.error('Export Generation Error:', error);
+            this.showToast('Error', 'Failed to generate export: ' + (error.message || error), 'error');
         } finally {
             this.isDownloading = false;
         }
@@ -753,8 +768,48 @@ export default class UserRecordTablePdf extends LightningElement {
         return `${pages} ${pages === 1 ? 'Page' : 'Pages'}`;
     }
 
+    get exportFormatOptions() {
+        return [
+            { label: 'PDF Document (.pdf)', value: 'pdf' },
+            { label: 'CSV Spreadsheet (.csv)', value: 'csv' }
+        ];
+    }
+
+    get isFormatPdf() {
+        return this.exportFormat === 'pdf';
+    }
+
+    get isFormatCsv() {
+        return this.exportFormat === 'csv';
+    }
+
+    get exportModalTitle() {
+        return this.isFormatPdf ? 'Download PDF Export' : 'Download CSV Export';
+    }
+
+    get exportModalSubtitle() {
+        return this.isFormatPdf
+            ? 'Configure your PDF report options, orientation, and pagination.'
+            : 'Export clean spreadsheet data using your configured column order.';
+    }
+
+    get exportModalIcon() {
+        return this.isFormatPdf ? 'utility:pdf_ext' : 'utility:table';
+    }
+
+    get downloadButtonIcon() {
+        return this.isFormatPdf ? 'utility:download' : 'utility:table';
+    }
+
+    get headerDownloadButtonLabel() {
+        return this.isFormatPdf ? 'Download PDF' : 'Download CSV';
+    }
+
     get exportButtonLabel() {
         const count = this.recordsToExport.length;
+        if (this.isFormatCsv) {
+            return `Download CSV (${count} Records)`;
+        }
         const pages = this.pdfTotalPagesCount;
         return `Download PDF (${count} Records • ${pages} ${pages === 1 ? 'Page' : 'Pages'})`;
     }

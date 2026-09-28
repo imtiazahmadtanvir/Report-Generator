@@ -15,6 +15,10 @@
                     <div class="online-indicator" title="Logged In"></div>
                 </div>
                 <div class="user-meta">
+                    <div class="app-brand-pill">
+                        <lightning-icon icon-name="standard:report" size="xx-small" class="app-brand-icon"></lightning-icon>
+                        <span class="app-brand-title">Report Generator</span>
+                    </div>
                     <div class="greeting-row">
                         <span class="greeting-text">Welcome back,</span>
                         <span class="user-name">{userInfo.name}</span>
@@ -43,7 +47,7 @@
                 <div class="step-divider"></div>
                 <div class={step2BubbleClass}>
                     <span class="step-num">2</span>
-                    <span class="step-label">Configure Columns & PDF</span>
+                    <span class="step-label">Configure Columns & Report</span>
                 </div>
             </div>
 
@@ -66,17 +70,17 @@
                             class="action-btn-glass">
                         </lightning-button>
                         <lightning-button
-                            label="Download PDF"
+                            label={headerDownloadButtonLabel}
                             variant="brand"
-                            icon-name="utility:download"
+                            icon-name={downloadButtonIcon}
                             onclick={handleOpenExportModal}
                             disabled={isTableEmpty}
                             class="action-btn-cta">
                         </lightning-button>
                         <lightning-button-icon
                             icon-name="utility:settings"
-                            alternative-text="PDF Settings"
-                            title="Configure PDF Options"
+                            alternative-text="Export Settings"
+                            title="Configure Export Format (PDF / CSV)"
                             onclick={handleOpenExportModal}
                             disabled={isTableEmpty}
                             variant="border-filled"
@@ -101,7 +105,7 @@
                         </div>
                         <h1 class="hero-headline">Select a Salesforce Object</h1>
                         <p class="hero-subline">
-                            Choose from <strong>{countAll} accessible objects</strong> in your Salesforce organization. Select an object to explore its fields, view live records, and export custom PDF reports.
+                            Choose from <strong>{countAll} accessible objects</strong> in your Salesforce organization. Select an object to explore its fields, view live records, and generate custom reports.
                         </p>
                     </div>
 
@@ -333,8 +337,8 @@
                         <div class="sequence-title-group">
                             <lightning-icon icon-name="utility:table" size="x-small" class="sequence-icon"></lightning-icon>
                             <div>
-                                <h3 class="sequence-heading">Column Sequence & PDF Order</h3>
-                                <p class="sequence-subtext">Columns will appear in the table and downloaded PDF in this exact order (1st, 2nd, 3rd...). Use ◀ ▶ to reorder.</p>
+                                <h3 class="sequence-heading">Column Sequence & Report Order</h3>
+                                <p class="sequence-subtext">Columns will appear in the table and generated reports in this exact order (1st, 2nd, 3rd...). Use ◀ ▶ to reorder.</p>
                             </div>
                         </div>
                         <div class="sequence-actions-group">
@@ -395,7 +399,7 @@
                         <template lwc:if={hasSelectedRows}>
                             <div class="metric-pill metric-pill-highlight">
                                 <lightning-icon icon-name="utility:check" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
-                                <span><strong>{selectedRowsCount}</strong> records selected for PDF</span>
+                                <span><strong>{selectedRowsCount}</strong> records selected for report</span>
                             </div>
                             <button class="link-btn-clear" onclick={handleClearSelection}>Clear Selection</button>
                         </template>
@@ -534,7 +538,7 @@
                             Select & Order Columns ({selectedObjectLabel})
                         </h2>
                         <p class="slds-m-top_x-small modal-subtitle">
-                            Choose fields to display. Fields ordered in the right list will become 1st column, 2nd column, etc. in your table and PDF!
+                            Choose fields to display. Fields ordered in the right list will become 1st column, 2nd column, etc. in your table and report!
                         </p>
                     </header>
 
@@ -575,7 +579,8 @@
         </template>
 
         <!-- ============================================================== -->
-        <!-- DOWNLOAD PDF MODAL                                             -->
+        <!-- ============================================================== -->
+        <!-- DOWNLOAD PDF / CSV EXPORT MODAL                                -->
         <!-- ============================================================== -->
         <template lwc:if={isExportModalOpen}>
             <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_small">
@@ -586,10 +591,10 @@
                             <span class="slds-assistive-text">Close</span>
                         </button>
                         <h2 class="slds-modal__title modal-title">
-                            <lightning-icon icon-name="utility:download" size="small" class="modal-title-icon slds-m-right_x-small"></lightning-icon>
-                            Download PDF Export
+                            <lightning-icon icon-name={exportModalIcon} size="small" class="modal-title-icon slds-m-right_x-small"></lightning-icon>
+                            {exportModalTitle}
                         </h2>
-                        <p class="slds-m-top_x-small modal-subtitle">Configure your PDF report options and pagination.</p>
+                        <p class="slds-m-top_x-small modal-subtitle">{exportModalSubtitle}</p>
                     </header>
 
                     <div class="slds-modal__content slds-p-around_medium modal-body-styled">
@@ -602,10 +607,18 @@
                                 <span class="summary-title">Records to Export:</span>
                                 <span class="summary-val text-brand">{recordsToExport.length} records</span>
                             </div>
-                            <div class="summary-metric">
-                                <span class="summary-title">PDF Pages:</span>
-                                <span class="summary-val text-brand">{pdfTotalPagesLabel}</span>
-                            </div>
+                            <template lwc:if={isFormatPdf}>
+                                <div class="summary-metric">
+                                    <span class="summary-title">PDF Pages:</span>
+                                    <span class="summary-val text-brand">{pdfTotalPagesLabel}</span>
+                                </div>
+                            </template>
+                            <template lwc:if={isFormatCsv}>
+                                <div class="summary-metric">
+                                    <span class="summary-title">Format:</span>
+                                    <span class="summary-val text-brand">CSV (.csv)</span>
+                                </div>
+                            </template>
                             <div class="summary-metric">
                                 <span class="summary-title">Active Columns:</span>
                                 <span class="summary-val">{columns.length} columns</span>
@@ -613,51 +626,75 @@
                         </div>
 
                         <div class="slds-form slds-m-top_medium">
+                            <!-- FORMAT SWITCHER (PDF vs CSV) -->
+                            <div class="format-switcher-box slds-m-bottom_medium">
+                                <label class="slds-form-element__label slds-text-title_bold slds-m-bottom_xx-small">Export File Format</label>
+                                <lightning-radio-group
+                                    name="exportFormat"
+                                    variant="label-hidden"
+                                    options={exportFormatOptions}
+                                    value={exportFormat}
+                                    onchange={handleExportFormatChange}
+                                    type="button">
+                                </lightning-radio-group>
+                            </div>
+
                             <lightning-input
                                 type="text"
-                                label="Document Title"
+                                label="File / Document Title"
                                 value={pdfTitle}
                                 onchange={handlePdfTitleChange}
                                 class="slds-m-bottom_medium">
                             </lightning-input>
 
                             <div class="slds-grid slds-gutters slds-m-bottom_medium">
-                                <div class="slds-col slds-size_1-of-2">
+                                <div class="slds-col slds-size_1-of-1">
                                     <lightning-combobox
                                         name="exportScope"
-                                        label="Records to Include in PDF"
+                                        label="Records to Include in Export"
                                         value={exportScopeOption}
                                         options={exportScopeOptions}
                                         onchange={handleExportScopeChange}>
                                     </lightning-combobox>
                                 </div>
-                                <div class="slds-col slds-size_1-of-2">
-                                    <lightning-combobox
-                                        name="pdfRowsPerPage"
-                                        label="Rows per Page in PDF"
-                                        value={pdfRowsPerPage}
-                                        options={pdfRowsPerPageOptions}
-                                        onchange={handlePdfRowsPerPageChange}>
-                                    </lightning-combobox>
-                                </div>
                             </div>
 
-                            <div class="slds-grid slds-gutters slds-m-bottom_medium">
-                                <div class="slds-col slds-size_1-of-1">
-                                    <lightning-combobox
-                                        name="orientation"
-                                        label="Page Orientation"
-                                        value={pdfOrientation}
-                                        options={orientationOptions}
-                                        onchange={handleOrientationChange}>
-                                    </lightning-combobox>
+                            <!-- PDF-SPECIFIC OPTIONS -->
+                            <template lwc:if={isFormatPdf}>
+                                <div class="slds-grid slds-gutters slds-m-bottom_medium">
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-combobox
+                                            name="pdfRowsPerPage"
+                                            label="Rows per Page in PDF"
+                                            value={pdfRowsPerPage}
+                                            options={pdfRowsPerPageOptions}
+                                            onchange={handlePdfRowsPerPageChange}>
+                                        </lightning-combobox>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-combobox
+                                            name="orientation"
+                                            label="Page Orientation"
+                                            value={pdfOrientation}
+                                            options={orientationOptions}
+                                            onchange={handleOrientationChange}>
+                                        </lightning-combobox>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="export-notice-box">
-                                <lightning-icon icon-name="utility:info_alt" size="x-small" class="slds-m-right_x-small"></lightning-icon>
-                                <span>With <strong>{recordsToExport.length} records</strong> and <strong>{pdfRowsPerPage} rows per page</strong>, the generated PDF will have exactly <strong>{pdfTotalPagesLabel}</strong>.</span>
-                            </div>
+                                <div class="export-notice-box">
+                                    <lightning-icon icon-name="utility:info_alt" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                                    <span>With <strong>{recordsToExport.length} records</strong> and <strong>{pdfRowsPerPage} rows per page</strong>, the generated PDF will have exactly <strong>{pdfTotalPagesLabel}</strong>.</span>
+                                </div>
+                            </template>
+
+                            <!-- CSV-SPECIFIC NOTICE -->
+                            <template lwc:if={isFormatCsv}>
+                                <div class="export-notice-box csv-notice-box">
+                                    <lightning-icon icon-name="utility:table" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                                    <span>Exporting <strong>{recordsToExport.length} records</strong> across <strong>{columns.length} columns</strong> as a UTF-8 CSV spreadsheet compatible with Microsoft Excel, Google Sheets, and CRM tools.</span>
+                                </div>
+                            </template>
                         </div>
                     </div>
 
@@ -666,7 +703,7 @@
                         <lightning-button
                             variant="brand"
                             label={exportButtonLabel}
-                            icon-name="utility:download"
+                            icon-name={downloadButtonIcon}
                             onclick={handleConfirmDownloadPdf}
                             disabled={isDownloading}>
                         </lightning-button>

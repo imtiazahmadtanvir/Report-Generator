@@ -1,0 +1,263 @@
+/**
+ * @description Comprehensive test suite for AdminAccessController, AdminSecurityService, and AdminSecurityDataModel.
+ */
+@isTest
+private class AdminAccessControllerTest {
+
+    @testSetup
+    static void setupTestData() {
+        // Create custom Permission Set for testing
+        PermissionSet ps = new PermissionSet(
+            Name = 'Test_Admin_Custom_PS',
+            Label = 'Test Admin Custom PS',
+            Description = 'Custom test permission set for unit tests'
+        );
+        insert ps;
+
+        // Create ObjectPermissions for Account
+        ObjectPermissions op = new ObjectPermissions(
+            ParentId = ps.Id,
+            SobjectType = 'Account',
+            PermissionsRead = true,
+            PermissionsCreate = true,
+            PermissionsEdit = false,
+            PermissionsDelete = false,
+            PermissionsViewAllRecords = false,
+            PermissionsModifyAllRecords = false
+        );
+        insert op;
+    }
+
+    @isTest
+    static void testGetAdminOverview() {
+        Test.startTest();
+        AdminSecurityDataModel.AdminSecurityOverview overview = AdminAccessController.getAdminOverview();
+        Test.stopTest();
+
+        Assert.isNotNull(overview, 'Overview should not be null');
+        Assert.isTrue(overview.totalUsers > 0, 'Total users should be greater than zero');
+        Assert.isTrue(overview.isAuthorizedAdmin, 'Current user should be authorized admin');
+        Assert.isNotNull(overview.currentAdminName, 'Admin name should be populated');
+    }
+
+    @isTest
+    static void testGetUsers() {
+        Test.startTest();
+        List<AdminSecurityDataModel.AdminUserInfo> users = AdminAccessController.getUsers('', '', 'Active');
+        Test.stopTest();
+
+        Assert.isNotNull(users, 'User list should not be null');
+        Assert.isTrue(users.size() > 0, 'Active users should be returned');
+        Assert.isNotNull(users[0].name, 'User name should not be blank');
+    }
+
+    @isTest
+    static void testGetUserDetail() {
+        User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId() LIMIT 1];
+
+        Test.startTest();
+        AdminSecurityDataModel.UserDetailView detail = AdminAccessController.getUserDetail(testUser.Id);
+        Test.stopTest();
+
+        Assert.isNotNull(detail, 'User detail should not be null');
+        Assert.isNotNull(detail.user, 'User info DTO should be populated');
+        Assert.areEqual(testUser.Id, detail.user.userId, 'User ID should match');
+        Assert.isNotNull(detail.assignedPermissionSets, 'Assigned permission sets list should not be null');
+        Assert.isNotNull(detail.availablePermissionSets, 'Available permission sets list should not be null');
+    }
+
+    @isTest
+    static void testGetPermissionSets() {
+        Test.startTest();
+        List<AdminSecurityDataModel.PermissionSetSummary> allPs = AdminAccessController.getPermissionSets('', 'All');
+        List<AdminSecurityDataModel.PermissionSetSummary> customPs = AdminAccessController.getPermissionSets('Test_Admin_Custom_PS', 'Custom');
+        Test.stopTest();
+
+        Assert.isNotNull(allPs, 'All perm sets should not be null');
+        Assert.isTrue(allPs.size() > 0, 'Perm sets should be returned');
+        Assert.isTrue(customPs.size() > 0, 'Custom perm set should be found by search');
+    }
+
+    @isTest
+    static void testGetPermissionSetDetail() {
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'Test_Admin_Custom_PS' LIMIT 1];
+
+        Test.startTest();
+        AdminSecurityDataModel.PermissionSetDetail detail = AdminAccessController.getPermissionSetDetail(ps.Id);
+        Test.stopTest();
+
+        Assert.isNotNull(detail, 'Permission set detail should not be null');
+        Assert.areEqual(ps.Id, detail.permissionSet.id, 'Permission set ID should match');
+        Assert.isTrue(detail.objectPermissions.size() > 0, 'Should include Account object permission');
+    }
+
+    @isTest
+    static void testAssignAndRemovePermissionSet() {
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'Test_Admin_Custom_PS' LIMIT 1];
+        Id currentUserId = UserInfo.getUserId();
+
+        Test.startTest();
+        AdminSecurityDataModel.DmlResult assignRes = AdminAccessController.assignPermissionSetToUser(currentUserId, ps.Id);
+        AdminSecurityDataModel.DmlResult removeRes = AdminAccessController.removePermissionSetFromUser(currentUserId, ps.Id);
+        Test.stopTest();
+
+        Assert.isTrue(assignRes.success, 'Assignment should succeed');
+        Assert.isTrue(removeRes.success, 'Removal should succeed');
+    }
+
+    @isTest
+    static void testBulkAssignAndRemoveUsers() {
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'Test_Admin_Custom_PS' LIMIT 1];
+        List<Id> userIds = new List<Id>{UserInfo.getUserId()};
+
+        Test.startTest();
+        AdminSecurityDataModel.DmlResult bulkAssign = AdminAccessController.assignUsersToPermissionSet(ps.Id, userIds);
+        AdminSecurityDataModel.DmlResult bulkRemove = AdminAccessController.removeUsersFromPermissionSet(ps.Id, userIds);
+        Test.stopTest();
+
+        Assert.isTrue(bulkAssign.success, 'Bulk assign should succeed');
+        Assert.isTrue(bulkRemove.success, 'Bulk remove should succeed');
+    }
+
+    @isTest
+    static void testGetPermissionSetGroups() {
+        Test.startTest();
+        List<AdminSecurityDataModel.PermissionSetGroupSummary> groups = AdminAccessController.getPermissionSetGroups('', 'All');
+        Test.stopTest();
+
+        Assert.isNotNull(groups, 'Groups list should not be null');
+    }
+
+    @isTest
+    static void testGetProfilesAndProfileDetail() {
+        Profile p = [SELECT Id FROM Profile WHERE Id = :UserInfo.getProfileId() LIMIT 1];
+
+        Test.startTest();
+        List<AdminSecurityDataModel.ProfileSummary> profs = AdminAccessController.getProfiles('', 'All');
+        AdminSecurityDataModel.ProfileDetail detail = AdminAccessController.getProfileDetail(p.Id);
+        Test.stopTest();
+
+        Assert.isNotNull(profs, 'Profiles should not be null');
+        Assert.isTrue(profs.size() > 0, 'Profiles should be returned');
+        Assert.isNotNull(detail, 'Profile detail should not be null');
+        Assert.isNotNull(detail.systemPermissions, 'System permissions should be included');
+        Assert.isTrue(detail.systemPermissions.size() > 0, 'System permissions list should have items');
+    }
+
+    @isTest
+    static void testGetObjectAndFieldPermissionsForTarget() {
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'Test_Admin_Custom_PS' LIMIT 1];
+
+        Test.startTest();
+        List<AdminSecurityDataModel.ObjectPermItem> objPerms = AdminAccessController.getObjectPermissionsForTarget(ps.Id, 'PermissionSet', '');
+        List<AdminSecurityDataModel.FieldPermItem> fieldPerms = AdminAccessController.getFieldPermissionsForTarget(ps.Id, 'PermissionSet', 'Account', '');
+        Test.stopTest();
+
+        Assert.isNotNull(objPerms, 'Object permissions should not be null');
+        Assert.isTrue(objPerms.size() > 0, 'Account object permission should be returned');
+        Assert.isNotNull(fieldPerms, 'Field permissions should not be null');
+    }
+
+    @isTest
+    static void testGetAppAccessListAndAccessibleObjects() {
+        Test.startTest();
+        List<AdminSecurityDataModel.AppAccessSummary> apps = AdminAccessController.getAppAccessList('');
+        List<AdminSecurityDataModel.SelectOption> objects = AdminAccessController.getAccessibleObjects();
+        Test.stopTest();
+
+        Assert.isNotNull(apps, 'App list should not be null');
+        Assert.isNotNull(objects, 'Objects list should not be null');
+        Assert.isTrue(objects.size() > 0, 'Should find accessible objects');
+    }
+
+    @isTest
+    static void testSaveObjectAndFieldPermissionsCustom() {
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'Test_Admin_Custom_PS' LIMIT 1];
+
+        Test.startTest();
+        // Update ObjectPermissions
+        AdminSecurityDataModel.DmlResult objRes = AdminAccessController.saveObjectPermissions(
+            ps.Id, 'Account', true, true, true, false, false, false
+        );
+        // Update FieldPermissions
+        AdminSecurityDataModel.DmlResult fldRes = AdminAccessController.saveFieldPermissions(
+            ps.Id, 'Account', 'Account.AnnualRevenue', true, true
+        );
+        Test.stopTest();
+
+        Assert.isTrue(objRes.success, 'Object permissions save should succeed');
+        Assert.isTrue(fldRes.success, 'Field permissions save should succeed');
+    }
+
+    @isTest
+    static void testToggleUserActiveStatusSelfProtection() {
+        Id currentUserId = UserInfo.getUserId();
+
+        Test.startTest();
+        try {
+            AdminAccessController.toggleUserActiveStatus(currentUserId, false);
+            Assert.fail('Should have prevented deactivating self');
+        } catch (AuraHandledException ex) {
+            Assert.isNotNull(ex.getMessage(), 'Exception message expected');
+        }
+        Test.stopTest();
+    }
+
+    @isTest
+    static void testAssignAndRemovePermissionSetGroup() {
+        List<PermissionSetGroup> psgList = [SELECT Id FROM PermissionSetGroup LIMIT 1];
+        if (!psgList.isEmpty()) {
+            Id currentUserId = UserInfo.getUserId();
+            Test.startTest();
+            AdminSecurityDataModel.DmlResult assignRes = AdminAccessController.assignPermissionSetGroupToUser(currentUserId, psgList[0].Id);
+            AdminSecurityDataModel.PermissionSetGroupDetail detail = AdminAccessController.getPermissionSetGroupDetail(psgList[0].Id);
+            AdminSecurityDataModel.DmlResult removeRes = AdminAccessController.removePermissionSetGroupFromUser(currentUserId, psgList[0].Id);
+            Test.stopTest();
+
+            Assert.isTrue(assignRes.success, 'Group assignment should succeed');
+            Assert.isNotNull(detail, 'Group detail should not be null');
+            Assert.isTrue(removeRes.success, 'Group removal should succeed');
+        }
+    }
+
+    @isTest
+    static void testBulkAssignAndRemoveUsersToGroup() {
+        List<PermissionSetGroup> psgList = [SELECT Id FROM PermissionSetGroup LIMIT 1];
+        if (!psgList.isEmpty()) {
+            List<Id> userIds = new List<Id>{UserInfo.getUserId()};
+            Test.startTest();
+            AdminSecurityDataModel.DmlResult bulkAssign = AdminAccessController.assignUsersToPermissionSetGroup(psgList[0].Id, userIds);
+            AdminSecurityDataModel.DmlResult bulkRemove = AdminAccessController.removeUsersFromPermissionSetGroup(psgList[0].Id, userIds);
+            Test.stopTest();
+
+            Assert.isTrue(bulkAssign.success, 'Bulk group assign should succeed');
+            Assert.isTrue(bulkRemove.success, 'Bulk group remove should succeed');
+        }
+    }
+
+    @isTest
+    static void testSavePermissionsMetadataManagedValidation() {
+        // Find a profile-owned permission set
+        PermissionSet profilePs = [SELECT Id FROM PermissionSet WHERE IsOwnedByProfile = true LIMIT 1];
+
+        Test.startTest();
+        try {
+            AdminAccessController.saveObjectPermissions(
+                profilePs.Id, 'Account', true, true, false, false, false, false
+            );
+            Assert.fail('Should throw exception for profile-owned permission set');
+        } catch (AuraHandledException ex) {
+            Assert.isNotNull(ex.getMessage(), 'Exception message expected for metadata managed permission set');
+        }
+
+        try {
+            AdminAccessController.saveFieldPermissions(
+                profilePs.Id, 'Account', 'Account.AnnualRevenue', true, false
+            );
+            Assert.fail('Should throw exception for profile-owned field permission');
+        } catch (AuraHandledException ex) {
+            Assert.isNotNull(ex.getMessage(), 'Exception message expected for metadata managed field permission');
+        }
+        Test.stopTest();
+    }
+}

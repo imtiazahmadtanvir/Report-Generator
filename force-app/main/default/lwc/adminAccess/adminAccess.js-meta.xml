@@ -2,8 +2,8 @@
 <LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
     <apiVersion>60.0</apiVersion>
     <isExposed>true</isExposed>
-    <masterLabel>Report Generator</masterLabel>
-    <description>Interactive data table with logged-in user context, object selector, and instant client-side PDF and CSV report generation.</description>
+    <masterLabel>Admin Access</masterLabel>
+    <description>Centralized Salesforce administrative console for managing security, user access, permission sets, permission set groups, profiles, object access, field-level security, and apps.</description>
     <targets>
         <target>lightning__AppPage</target>
         <target>lightning__HomePage</target>

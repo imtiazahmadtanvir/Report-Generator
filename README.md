@@ -1,6 +1,6 @@
-# Salesforce Dynamic Report & Multi-Page PDF Generator
+# Salesforce Report Generator
 
-A complete Salesforce Lightning Web Component (LWC) solution for exploring standard and custom objects, dynamically selecting/reordering columns, viewing records, and generating multi-page PDF reports.
+A complete Salesforce Lightning Web Component (LWC) solution for exploring standard and custom objects, dynamically selecting/reordering columns, viewing records, and generating multi-page PDF & CSV reports.
 
 ---
 
@@ -145,13 +145,32 @@ This is the core engine that generates the PDF **entirely in the browser** witho
 
 ---
 
-### Step 6: Browser Download Trigger
+### Step 6: CSV Spreadsheet Generation (Pure JavaScript - `generateCsvBlob`)
+When the user switches the export format to **CSV**:
+1. `pdfBuilder.js` extracts the exact user-ordered column labels for the header row.
+2. Iterates over records and formats cell values, escaping commas, quotes, and newlines per RFC 4180:
+   ```javascript
+   function escapeCsvValue(val) {
+       if (val === null || val === undefined) return '';
+       const str = String(val);
+       if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+           return '"' + str.replace(/"/g, '""') + '"';
+       }
+       return str;
+   }
+   ```
+3. Prepends `\uFEFF` (UTF-8 Byte Order Mark) to ensure full compatibility with Microsoft Excel without encoding corruption.
+4. Returns an `application/csv` blob and triggers immediate download.
+
+---
+
+### Step 7: Browser Download Trigger
 1. `pdfBuilder.js` creates a DOM Object URL:
    ```javascript
    const url = URL.createObjectURL(blob);
    ```
-2. Injects a hidden `<a download="Account_Report.pdf" href="...">` element into the DOM and programmatically calls `.click()`.
-3. The PDF file is instantly downloaded directly by the user's browser.
+2. Injects a hidden `<a download="Report.pdf|csv" href="...">` element into the DOM and programmatically calls `.click()`.
+3. The file is instantly downloaded directly by the user's browser.
 4. Cleans up memory using `URL.revokeObjectURL(url)`.
 
 ---
