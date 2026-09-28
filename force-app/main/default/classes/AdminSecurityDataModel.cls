@@ -240,10 +240,144 @@ public with sharing class AdminSecurityDataModel {
         }
     }
 
+    // =========================================================================
+    // ACCESS EDITOR (Profile / User centric) DTOs
+    // =========================================================================
+
+    public class AccessContext {
+        @AuraEnabled public String targetType { get; set; } // 'Profile' or 'User'
+        @AuraEnabled public String targetId { get; set; }
+        @AuraEnabled public String name { get; set; }
+        @AuraEnabled public String profileId { get; set; }
+        @AuraEnabled public String profileName { get; set; }
+        @AuraEnabled public Boolean isCustomProfile { get; set; }
+        @AuraEnabled public Boolean hasModifyAllData { get; set; }
+        @AuraEnabled public String editPermSetId { get; set; }
+        @AuraEnabled public String editPermSetLabel { get; set; }
+        @AuraEnabled public Boolean editPermSetExists { get; set; }
+        @AuraEnabled public Boolean canEditObjectAccess { get; set; }
+        @AuraEnabled public Boolean canEditSetupAccess { get; set; }
+        @AuraEnabled public String readOnlyReason { get; set; }
+        @AuraEnabled public Integer activeUserCount { get; set; }
+        @AuraEnabled public String setupUrl { get; set; }
+        @AuraEnabled public List<AdminUserInfo> users { get; set; }
+        @AuraEnabled public List<KeySystemPermission> systemPermissions { get; set; }
+    }
+
+    public class AssignmentItem implements Comparable {
+        @AuraEnabled public String id { get; set; }
+        @AuraEnabled public String label { get; set; }
+        @AuraEnabled public String apiName { get; set; }
+        @AuraEnabled public String description { get; set; }
+        @AuraEnabled public String typeLabel { get; set; }
+        @AuraEnabled public String status { get; set; }
+        @AuraEnabled public Boolean isAssigned { get; set; }
+        @AuraEnabled public Integer assignedCount { get; set; }
+        @AuraEnabled public Integer totalCount { get; set; }
+
+        public Integer compareTo(Object compareTo) {
+            AssignmentItem other = (AssignmentItem) compareTo;
+            if (this.isAssigned != other.isAssigned) {
+                return this.isAssigned ? -1 : 1;
+            }
+            return (this.label == null ? '' : this.label).compareTo(other.label == null ? '' : other.label);
+        }
+    }
+
+    public class EntityAccessItem implements Comparable {
+        @AuraEnabled public String id { get; set; }
+        @AuraEnabled public String label { get; set; }
+        @AuraEnabled public String apiName { get; set; }
+        @AuraEnabled public String typeLabel { get; set; }
+        @AuraEnabled public String description { get; set; }
+        @AuraEnabled public Boolean isEnabled { get; set; }   // granted by the editable target
+        @AuraEnabled public Boolean isInherited { get; set; } // granted by another source (users only)
+        @AuraEnabled public String sources { get; set; }
+
+        public Integer compareTo(Object compareTo) {
+            EntityAccessItem other = (EntityAccessItem) compareTo;
+            return (this.label == null ? '' : this.label).compareTo(other.label == null ? '' : other.label);
+        }
+    }
+
+    public class ObjectAccessItem implements Comparable {
+        @AuraEnabled public String sobjectType { get; set; }
+        @AuraEnabled public String label { get; set; }
+        @AuraEnabled public Boolean isCustom { get; set; }
+        @AuraEnabled public Boolean canRead { get; set; }
+        @AuraEnabled public Boolean canCreate { get; set; }
+        @AuraEnabled public Boolean canEdit { get; set; }
+        @AuraEnabled public Boolean canDelete { get; set; }
+        @AuraEnabled public Boolean canViewAll { get; set; }
+        @AuraEnabled public Boolean canModifyAll { get; set; }
+        @AuraEnabled public Boolean inhRead { get; set; }
+        @AuraEnabled public Boolean inhCreate { get; set; }
+        @AuraEnabled public Boolean inhEdit { get; set; }
+        @AuraEnabled public Boolean inhDelete { get; set; }
+        @AuraEnabled public Boolean inhViewAll { get; set; }
+        @AuraEnabled public Boolean inhModifyAll { get; set; }
+        @AuraEnabled public String sources { get; set; }
+
+        public Integer compareTo(Object compareTo) {
+            ObjectAccessItem other = (ObjectAccessItem) compareTo;
+            return (this.label == null ? '' : this.label).compareTo(other.label == null ? '' : other.label);
+        }
+    }
+
+    public class FieldAccessItem implements Comparable {
+        @AuraEnabled public String field { get; set; }
+        @AuraEnabled public String apiName { get; set; }
+        @AuraEnabled public String label { get; set; }
+        @AuraEnabled public String dataType { get; set; }
+        @AuraEnabled public Boolean isCustom { get; set; }
+        @AuraEnabled public Boolean isEditSupported { get; set; }
+        @AuraEnabled public Boolean canRead { get; set; }
+        @AuraEnabled public Boolean canEdit { get; set; }
+        @AuraEnabled public Boolean inhRead { get; set; }
+        @AuraEnabled public Boolean inhEdit { get; set; }
+        @AuraEnabled public String sources { get; set; }
+
+        public Integer compareTo(Object compareTo) {
+            FieldAccessItem other = (FieldAccessItem) compareTo;
+            return (this.label == null ? '' : this.label).compareTo(other.label == null ? '' : other.label);
+        }
+    }
+
+    public class RecordTypeItem {
+        @AuraEnabled public String id { get; set; }
+        @AuraEnabled public String name { get; set; }
+        @AuraEnabled public String developerName { get; set; }
+        @AuraEnabled public String sobjectType { get; set; }
+        @AuraEnabled public String description { get; set; }
+        @AuraEnabled public Boolean isActive { get; set; }
+    }
+
+    public class ObjectAccessChange {
+        public String sobjectType;
+        public Boolean canRead;
+        public Boolean canCreate;
+        public Boolean canEdit;
+        public Boolean canDelete;
+        public Boolean canViewAll;
+        public Boolean canModifyAll;
+    }
+
+    public class FieldAccessChange {
+        public String field;
+        public Boolean canRead;
+        public Boolean canEdit;
+    }
+
+    public class EntityAccessChange {
+        public String id;
+        public Boolean enabled;
+    }
+
     public class DmlResult {
         @AuraEnabled public Boolean success { get; set; }
         @AuraEnabled public String message { get; set; }
         @AuraEnabled public String recordId { get; set; }
+        @AuraEnabled public List<String> errors { get; set; }
 
         public DmlResult(Boolean success, String message) {
             this.success = success;

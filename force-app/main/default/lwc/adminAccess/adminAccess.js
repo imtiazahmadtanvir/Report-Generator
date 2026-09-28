@@ -1,5 +1,6 @@
 import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import { NavigationMixin } from 'lightning/navigation';
 
 // Apex Controller Endpoints
 import getAdminOverview from '@salesforce/apex/AdminAccessController.getAdminOverview';
@@ -17,9 +18,7 @@ import getAppAccessList from '@salesforce/apex/AdminAccessController.getAppAcces
 import getAccessibleObjects from '@salesforce/apex/AdminAccessController.getAccessibleObjects';
 
 // Mutation Endpoints
-import assignPermissionSetToUser from '@salesforce/apex/AdminAccessController.assignPermissionSetToUser';
 import removePermissionSetFromUser from '@salesforce/apex/AdminAccessController.removePermissionSetFromUser';
-import assignPermissionSetGroupToUser from '@salesforce/apex/AdminAccessController.assignPermissionSetGroupToUser';
 import removePermissionSetGroupFromUser from '@salesforce/apex/AdminAccessController.removePermissionSetGroupFromUser';
 import assignUsersToPermissionSet from '@salesforce/apex/AdminAccessController.assignUsersToPermissionSet';
 import removeUsersFromPermissionSet from '@salesforce/apex/AdminAccessController.removeUsersFromPermissionSet';
@@ -28,8 +27,9 @@ import removeUsersFromPermissionSetGroup from '@salesforce/apex/AdminAccessContr
 import saveObjectPermissions from '@salesforce/apex/AdminAccessController.saveObjectPermissions';
 import saveFieldPermissions from '@salesforce/apex/AdminAccessController.saveFieldPermissions';
 import toggleUserActiveStatus from '@salesforce/apex/AdminAccessController.toggleUserActiveStatus';
+import changeUserProfile from '@salesforce/apex/AdminAccessEditorController.changeUserProfile';
 
-export default class AdminAccess extends LightningElement {
+export default class AdminAccess extends NavigationMixin(LightningElement) {
     @track isLoading = false;
     @track activeTab = 'profiles';
 
@@ -76,7 +76,6 @@ export default class AdminAccess extends LightningElement {
     @track userStatusFilter = 'All';
     @track usersList = [];
     @track selectedUser = null;
-    @track selectedUserSubTab = 'permSets';
 
     // SECTION 2: PERMISSION SETS STATE
     @track psSearchTerm = '';
@@ -96,7 +95,6 @@ export default class AdminAccess extends LightningElement {
     @track profileSearchTerm = '';
     @track profilesList = [];
     @track selectedProfile = null;
-    @track selectedProfileSubTab = 'users';
 
     // SECTION 5: OBJECT ACCESS STATE
     @track objTargetType = 'PermissionSet';
@@ -132,6 +130,9 @@ export default class AdminAccess extends LightningElement {
     @track assignSearchTerm = '';
     @track assignItems = [];
     @track selectedAssignIds = [];
+
+    @track showProfileModal = false;
+    @track newProfileId = '';
 
     @track showEditObjectModal = false;
     @track editObjectData = {};
@@ -353,64 +354,6 @@ export default class AdminAccess extends LightningElement {
         this.loadUsers();
     }
 
-    handleUserSubTabChange(event) {
-        this.selectedUserSubTab = event.target.value;
-    }
-
-    handlePromptAssignPermSetToUser() {
-        this.assignModalTitle = `Assign Permission Set to ${this.selectedUser.user.name}`;
-        this.assignModalType = 'assignPermSetToUser';
-        this.assignSearchTerm = '';
-        this.assignItems = (this.selectedUser.availablePermissionSets || []).map(ps => ({
-            id: ps.id,
-            title: ps.label,
-            subtitle: `${ps.name} • ${ps.typeBadge} • License: ${ps.licenseName}`,
-            selected: false,
-            rowClass: 'selectable-row'
-        }));
-        this.selectedAssignIds = [];
-        this.showAssignModal = true;
-    }
-
-    handlePromptAssignGroupToUser() {
-        this.assignModalTitle = `Assign Permission Set Group to ${this.selectedUser.user.name}`;
-        this.assignModalType = 'assignGroupToUser';
-        this.assignSearchTerm = '';
-        this.assignItems = (this.selectedUser.availablePermissionSetGroups || []).map(grp => ({
-            id: grp.id,
-            title: grp.masterLabel,
-            subtitle: `${grp.developerName} • Status: ${grp.status}`,
-            selected: false,
-            rowClass: 'selectable-row'
-        }));
-        this.selectedAssignIds = [];
-        this.showAssignModal = true;
-    }
-
-    handlePromptRemovePermSetFromUser(event) {
-        const psId = event.currentTarget.dataset.id;
-        const psName = event.currentTarget.dataset.name;
-        this.confirmTitle = 'Confirm Permission Set Removal';
-        this.confirmMessage = `Are you sure you want to remove the permission set "${psName}" from ${this.selectedUser.user.name}? This will revoke any permissions granted through this set.`;
-        this.confirmItemName = psName;
-        this.confirmTargetName = this.selectedUser.user.name;
-        this.confirmActionType = 'removePermSetFromUser';
-        this.confirmPayload = { userId: this.selectedUser.user.userId, permSetId: psId };
-        this.showConfirmModal = true;
-    }
-
-    handlePromptRemoveGroupFromUser(event) {
-        const grpId = event.currentTarget.dataset.id;
-        const grpName = event.currentTarget.dataset.name;
-        this.confirmTitle = 'Confirm Group Removal';
-        this.confirmMessage = `Are you sure you want to remove the Permission Set Group "${grpName}" from ${this.selectedUser.user.name}?`;
-        this.confirmItemName = grpName;
-        this.confirmTargetName = this.selectedUser.user.name;
-        this.confirmActionType = 'removeGroupFromUser';
-        this.confirmPayload = { userId: this.selectedUser.user.userId, groupId: grpId };
-        this.showConfirmModal = true;
-    }
-
     handlePromptToggleUserStatus() {
         const newStatus = !this.selectedUser.user.isActive;
         const actionText = newStatus ? 'activate' : 'deactivate';
@@ -610,10 +553,6 @@ export default class AdminAccess extends LightningElement {
     handleBackToProfiles() {
         this.selectedProfile = null;
         this.loadProfiles();
-    }
-
-    handleProfileSubTabChange(event) {
-        this.selectedProfileSubTab = event.target.value;
     }
 
     // =========================================================================
@@ -836,24 +775,6 @@ export default class AdminAccess extends LightningElement {
         try {
             let res;
             switch (this.confirmActionType) {
-                case 'removePermSetFromUser':
-                    res = await removePermissionSetFromUser({
-                        userId: this.confirmPayload.userId,
-                        permissionSetId: this.confirmPayload.permSetId
-                    });
-                    this.showToast('Success', res.message, 'success');
-                    await this.viewUserDetailById(this.confirmPayload.userId);
-                    break;
-
-                case 'removeGroupFromUser':
-                    res = await removePermissionSetGroupFromUser({
-                        userId: this.confirmPayload.userId,
-                        permissionSetGroupId: this.confirmPayload.groupId
-                    });
-                    this.showToast('Success', res.message, 'success');
-                    await this.viewUserDetailById(this.confirmPayload.userId);
-                    break;
-
                 case 'toggleUserStatus':
                     res = await toggleUserActiveStatus({
                         userId: this.confirmPayload.userId,
@@ -939,28 +860,6 @@ export default class AdminAccess extends LightningElement {
         try {
             let res;
             switch (this.assignModalType) {
-                case 'assignPermSetToUser':
-                    for (const psId of this.selectedAssignIds) {
-                        res = await assignPermissionSetToUser({
-                            userId: this.selectedUser.user.userId,
-                            permissionSetId: psId
-                        });
-                    }
-                    this.showToast('Success', 'Permission Set(s) assigned successfully.', 'success');
-                    await this.viewUserDetailById(this.selectedUser.user.userId);
-                    break;
-
-                case 'assignGroupToUser':
-                    for (const grpId of this.selectedAssignIds) {
-                        res = await assignPermissionSetGroupToUser({
-                            userId: this.selectedUser.user.userId,
-                            permissionSetGroupId: grpId
-                        });
-                    }
-                    this.showToast('Success', 'Permission Set Group(s) assigned successfully.', 'success');
-                    await this.viewUserDetailById(this.selectedUser.user.userId);
-                    break;
-
                 case 'assignUsersToPs':
                     res = await assignUsersToPermissionSet({
                         permissionSetId: this.selectedPermSet.permissionSet.id,
@@ -989,15 +888,6 @@ export default class AdminAccess extends LightningElement {
     // =========================================================================
     // COMPUTED GETTERS
     // =========================================================================
-    get adminInitials() {
-        if (!this.overview || !this.overview.currentAdminName) return 'AD';
-        const parts = this.overview.currentAdminName.trim().split(' ');
-        if (parts.length >= 2) {
-            return (parts[0][0] + parts[1][0]).toUpperCase();
-        }
-        return parts[0].substring(0, 2).toUpperCase();
-    }
-
     get navItems() {
         return [
             { name: 'profiles', value: 'profiles', label: 'Profiles', icon: 'utility:identity' },
@@ -1050,9 +940,10 @@ export default class AdminAccess extends LightningElement {
         return !this.selectedAssignIds || this.selectedAssignIds.length === 0;
     }
 
-    get selectedUserStatusClass() {
-        if (!this.selectedUser || !this.selectedUser.user) return 'badge-inactive';
-        return this.selectedUser.user.isActive ? 'badge-active' : 'badge-inactive';
+    get selectedUserBadgeClass() {
+        return this.selectedUser && this.selectedUser.user && this.selectedUser.user.isActive
+            ? 'slds-badge slds-theme_success'
+            : 'slds-badge';
     }
 
     get toggleUserBtnLabel() {
@@ -1063,11 +954,6 @@ export default class AdminAccess extends LightningElement {
     get toggleUserBtnIcon() {
         if (!this.selectedUser || !this.selectedUser.user) return 'utility:check';
         return this.selectedUser.user.isActive ? 'utility:ban' : 'utility:check';
-    }
-
-    get toggleUserBtnVariant() {
-        if (!this.selectedUser || !this.selectedUser.user) return 'neutral';
-        return this.selectedUser.user.isActive ? 'destructive-text' : 'brand';
     }
 
     get selectedPermSetTypeClass() {
@@ -1083,14 +969,6 @@ export default class AdminAccess extends LightningElement {
     get selectedPermSetEditableLabel() {
         if (!this.selectedPermSet || !this.selectedPermSet.permissionSet) return 'View Only (Metadata Managed)';
         return this.selectedPermSet.permissionSet.isEditable ? 'Editable' : 'View Only (Metadata Managed)';
-    }
-
-    get hasUserAssignedPermSets() {
-        return Boolean(this.selectedUser?.assignedPermissionSets?.length);
-    }
-
-    get hasUserAssignedGroups() {
-        return Boolean(this.selectedUser?.assignedPermissionSetGroups?.length);
     }
 
     get hasPermSetAssignedUsers() {
@@ -1119,6 +997,94 @@ export default class AdminAccess extends LightningElement {
 
     get hasFilteredAssignItems() {
         return Boolean(this.filteredAssignItems?.length);
+    }
+
+    // =========================================================================
+    // HEADER, SETUP LINKS & ACCESS EDITOR
+    // =========================================================================
+    get headerStats() {
+        const o = this.overview || {};
+        return [
+            { tab: 'profiles', label: 'Profiles', value: o.totalProfiles, meta: 'Baseline access', title: 'Open Profiles' },
+            { tab: 'users', label: 'Users', value: o.totalUsers, meta: `${o.activeUsers} active`, title: 'Open Users' },
+            { tab: 'permSets', label: 'Permission Sets', value: o.totalPermSets, meta: `${o.customPermSets} custom`, title: 'Open Permission Sets' },
+            { tab: 'groups', label: 'Permission Set Groups', value: o.totalPermSetGroups, meta: 'Bundled access', title: 'Open Permission Set Groups' },
+            { tab: 'apps', label: 'Apps', value: o.totalApps, meta: 'Lightning and connected', title: 'Open App Security' }
+        ];
+    }
+
+    handleStatClick(event) {
+        this.handleTabChange({ detail: { name: event.currentTarget.dataset.tab } });
+    }
+
+    navigateToUrl(url) {
+        this[NavigationMixin.Navigate]({ type: 'standard__webPage', attributes: { url } });
+    }
+
+    handleOpenSetupHome() {
+        this.navigateToUrl('/lightning/setup/SetupOneHome/home');
+    }
+
+    handleOpenUserSetup() {
+        const userId = this.selectedUser.user.userId;
+        this.navigateToUrl(`/lightning/setup/ManageUsers/page?address=%2F${userId}%3Fnoredirect%3D1`);
+    }
+
+    handleOpenProfileSetup() {
+        this.navigateToUrl(`/lightning/setup/EnhancedProfiles/page?address=%2F${this.selectedProfile.profile.id}`);
+    }
+
+    async handleOpenUserProfile() {
+        const profileId = this.selectedUser.user.profileId;
+        this.activeTab = 'profiles';
+        await this.viewProfileDetailById(profileId);
+    }
+
+    async handleEditorOpenUser(event) {
+        this.activeTab = 'users';
+        await this.viewUserDetailById(event.detail.userId);
+    }
+
+    handleEditorAccessChange() {
+        // Keep list counts and header stats current without blocking the editor
+        Promise.all([this.loadOverview(), this.loadUsers()]).catch(() => {});
+    }
+
+    get assignableProfileOptions() {
+        return this.profileOptions.filter(o => o.value);
+    }
+
+    get profileSaveDisabled() {
+        return !this.newProfileId || (this.selectedUser && this.newProfileId === this.selectedUser.user.profileId);
+    }
+
+    handleOpenProfileModal() {
+        this.newProfileId = this.selectedUser.user.profileId;
+        this.showProfileModal = true;
+    }
+
+    handleCloseProfileModal() {
+        this.showProfileModal = false;
+    }
+
+    handleNewProfileChange(event) {
+        this.newProfileId = event.detail.value;
+    }
+
+    async handleSaveUserProfile() {
+        const userId = this.selectedUser.user.userId;
+        this.showProfileModal = false;
+        this.isLoading = true;
+        try {
+            const res = await changeUserProfile({ userId, profileId: this.newProfileId });
+            this.showToast('Profile updated', res.message, 'success');
+            await this.viewUserDetailById(userId);
+            this.handleEditorAccessChange();
+        } catch (error) {
+            this.showToast('Profile not changed', this.extractErrorMessage(error), 'error');
+        } finally {
+            this.isLoading = false;
+        }
     }
 
     showToast(title, message, variant) {

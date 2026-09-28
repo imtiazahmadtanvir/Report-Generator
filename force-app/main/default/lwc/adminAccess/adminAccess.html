@@ -8,68 +8,55 @@
         <!-- ============================================================== -->
         <!-- EXECUTIVE ADMIN CONSOLE HEADER                                 -->
         <!-- ============================================================== -->
-        <header class="admin-header">
-            <div class="header-left">
-                <div class="admin-avatar-container">
-                    <div class="admin-avatar-fallback">{adminInitials}</div>
-                    <div class="admin-shield-indicator" title="Salesforce Security Admin">
-                        <lightning-icon icon-name="utility:shield" size="xx-small" variant="inverse"></lightning-icon>
+        <div class="slds-page-header slds-page-header_record-home console-header">
+            <div class="slds-page-header__row">
+                <div class="slds-page-header__col-title">
+                    <div class="slds-media">
+                        <div class="slds-media__figure">
+                            <lightning-icon icon-name="standard:portal" size="medium" alternative-text="Admin Access"></lightning-icon>
+                        </div>
+                        <div class="slds-media__body">
+                            <div class="slds-page-header__name">
+                                <div class="slds-page-header__name-title">
+                                    <h1>
+                                        <span>Security Console</span>
+                                        <span class="slds-page-header__title slds-truncate" title="Admin Access">Admin Access</span>
+                                    </h1>
+                                </div>
+                            </div>
+                            <p class="slds-page-header__name-meta">
+                                Signed in as {overview.currentAdminName} &bull; {overview.currentAdminProfile}
+                            </p>
+                        </div>
                     </div>
                 </div>
-                <div class="admin-meta">
-                    <div class="app-brand-pill">
-                        <lightning-icon icon-name="standard:security" size="xx-small"></lightning-icon>
-                        <span class="app-brand-title">Admin Access Console</span>
-                    </div>
-                    <div class="admin-title-row">
-                        <span class="admin-name">{overview.currentAdminName}</span>
-                        <span class="admin-badge">{overview.currentAdminProfile}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- STAT CHIPS -->
-            <div class="header-stats-cluster">
-                <div class="stat-chip" title="Total Org Users">
-                    <lightning-icon icon-name="utility:user" size="small" class="stat-icon"></lightning-icon>
-                    <div class="stat-info">
-                        <span class="stat-value">{overview.totalUsers}</span>
-                        <span class="stat-label">Users ({overview.activeUsers} Active)</span>
-                    </div>
-                </div>
-                <div class="stat-chip" title="Total Standalone Permission Sets">
-                    <lightning-icon icon-name="utility:user_role" size="small" class="stat-icon"></lightning-icon>
-                    <div class="stat-info">
-                        <span class="stat-value">{overview.totalPermSets}</span>
-                        <span class="stat-label">Perm Sets ({overview.customPermSets} Custom)</span>
-                    </div>
-                </div>
-                <div class="stat-chip" title="Total Permission Set Groups">
-                    <lightning-icon icon-name="utility:groups" size="small" class="stat-icon"></lightning-icon>
-                    <div class="stat-info">
-                        <span class="stat-value">{overview.totalPermSetGroups}</span>
-                        <span class="stat-label">Perm Set Groups</span>
-                    </div>
-                </div>
-                <div class="stat-chip" title="Total Org Profiles">
-                    <lightning-icon icon-name="utility:profile" size="small" class="stat-icon"></lightning-icon>
-                    <div class="stat-info">
-                        <span class="stat-value">{overview.totalProfiles}</span>
-                        <span class="stat-label">Profiles</span>
+                <div class="slds-page-header__col-actions">
+                    <div class="slds-page-header__controls">
+                        <div class="slds-page-header__control">
+                            <lightning-button-group>
+                                <lightning-button label="Refresh" icon-name="utility:refresh" onclick={refreshAll}></lightning-button>
+                                <lightning-button label="Setup" icon-name="utility:setup" onclick={handleOpenSetupHome}></lightning-button>
+                            </lightning-button-group>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            <!-- HEADER ACTIONS -->
-            <div class="header-actions">
-                <lightning-button
-                    label="Refresh Console"
-                    icon-name="utility:refresh"
-                    variant="neutral"
-                    onclick={refreshAll}
-                ></lightning-button>
+            <div class="slds-page-header__row slds-page-header__row_gutters">
+                <div class="slds-page-header__col-details">
+                    <ul class="slds-page-header__detail-row console-stats">
+                        <template for:each={headerStats} for:item="stat">
+                            <li key={stat.tab} class="slds-page-header__detail-block">
+                                <button class="slds-button stat-button" data-tab={stat.tab} onclick={handleStatClick} title={stat.title}>
+                                    <span class="slds-text-title slds-truncate">{stat.label}</span>
+                                    <span class="stat-number">{stat.value}</span>
+                                    <span class="slds-text-body_small slds-text-color_weak">{stat.meta}</span>
+                                </button>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
             </div>
-        </header>
+        </div>
 
         <!-- ============================================================== -->
         <!-- MAIN NAVIGATION TABSET                                         -->
@@ -115,261 +102,76 @@
                 <template lwc:if={isUsersTab}>
                     <template lwc:if={selectedUser}>
                         <!-- USER DETAIL VIEW -->
-                        <div class="detail-hero-banner">
-                            <div class="hero-identity">
-                                <div class="hero-avatar">
-                                    <lightning-icon icon-name="standard:user" size="medium" variant="inverse"></lightning-icon>
-                                </div>
-                                <div class="hero-title-block">
-                                    <div class="hero-main-title">
-                                        <span>{selectedUser.user.name}</span>
-                                        <span class={selectedUserStatusClass}>
-                                            {selectedUser.user.statusBadge}
-                                        </span>
+                        <div class="slds-page-header slds-page-header_record-home detail-header">
+                            <div class="slds-page-header__row">
+                                <div class="slds-page-header__col-title">
+                                    <div class="slds-media">
+                                        <div class="slds-media__figure">
+                                            <lightning-icon icon-name="standard:user" size="medium" alternative-text="User"></lightning-icon>
+                                        </div>
+                                        <div class="slds-media__body">
+                                            <div class="slds-page-header__name">
+                                                <div class="slds-page-header__name-title">
+                                                    <h1>
+                                                        <span>User</span>
+                                                        <span class="slds-page-header__title slds-truncate" title={selectedUser.user.name}>{selectedUser.user.name}</span>
+                                                    </h1>
+                                                </div>
+                                                <div class="slds-page-header__name-switcher">
+                                                    <span class={selectedUserBadgeClass}>{selectedUser.user.statusBadge}</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="hero-subtitle">
-                                        <span><strong>Username:</strong> {selectedUser.user.username}</span>
-                                        <span>•</span>
-                                        <span><strong>Email:</strong> {selectedUser.user.email}</span>
-                                        <span>•</span>
-                                        <span><strong>Profile:</strong> {selectedUser.user.profileName}</span>
-                                        <span>•</span>
-                                        <span><strong>Role:</strong> {selectedUser.user.roleName}</span>
+                                </div>
+                                <div class="slds-page-header__col-actions">
+                                    <div class="slds-page-header__controls">
+                                        <div class="slds-page-header__control">
+                                            <lightning-button-group>
+                                                <lightning-button label="Change Profile" icon-name="utility:change_owner" onclick={handleOpenProfileModal}></lightning-button>
+                                                <lightning-button label={toggleUserBtnLabel} icon-name={toggleUserBtnIcon} onclick={handlePromptToggleUserStatus}></lightning-button>
+                                                <lightning-button label="View in Setup" icon-name="utility:new_window" onclick={handleOpenUserSetup}></lightning-button>
+                                            </lightning-button-group>
+                                        </div>
+                                        <div class="slds-page-header__control">
+                                            <lightning-button label="Back to Users" icon-name="utility:back" onclick={handleBackToUsers}></lightning-button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="hero-actions">
-                                <lightning-button
-                                    label={toggleUserBtnLabel}
-                                    icon-name={toggleUserBtnIcon}
-                                    variant={toggleUserBtnVariant}
-                                    onclick={handlePromptToggleUserStatus}
-                                ></lightning-button>
-                                <lightning-button
-                                    label="← Back to User List"
-                                    icon-name="utility:back"
-                                    variant="neutral"
-                                    onclick={handleBackToUsers}
-                                ></lightning-button>
+                            <div class="slds-page-header__row slds-page-header__row_gutters">
+                                <div class="slds-page-header__col-details">
+                                    <ul class="slds-page-header__detail-row detail-fields">
+                                        <li class="slds-page-header__detail-block">
+                                            <div class="slds-text-title slds-truncate">Username</div>
+                                            <div class="slds-truncate" title={selectedUser.user.username}>{selectedUser.user.username}</div>
+                                        </li>
+                                        <li class="slds-page-header__detail-block">
+                                            <div class="slds-text-title slds-truncate">Email</div>
+                                            <div class="slds-truncate" title={selectedUser.user.email}>{selectedUser.user.email}</div>
+                                        </li>
+                                        <li class="slds-page-header__detail-block">
+                                            <div class="slds-text-title slds-truncate">Profile</div>
+                                            <button class="slds-button" onclick={handleOpenUserProfile} title="Manage access for this profile">{selectedUser.user.profileName}</button>
+                                        </li>
+                                        <li class="slds-page-header__detail-block">
+                                            <div class="slds-text-title slds-truncate">Role</div>
+                                            <div class="slds-truncate">{selectedUser.user.roleName}</div>
+                                        </li>
+                                        <li class="slds-page-header__detail-block">
+                                            <div class="slds-text-title slds-truncate">Last Login</div>
+                                            <div class="slds-truncate">{selectedUser.user.lastLoginFormatted}</div>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- USER SUB-TABS -->
-                        <lightning-tabset variant="scoped" active-tab-value={selectedUserSubTab} onselect={handleUserSubTabChange}>
-                            <!-- USER TAB: PERMISSION SETS -->
-                            <lightning-tab label="Assigned Permission Sets" value="permSets" icon-name="standard:user_role">
-                                <div class="section-toolbar">
-                                    <div class="toolbar-filters">
-                                        <span class="slds-text-heading_small slds-m-right_medium">
-                                            Assigned Permission Sets <span class="badge-count">{selectedUser.assignedPermissionSets.length}</span>
-                                        </span>
-                                    </div>
-                                    <div class="toolbar-actions">
-                                        <lightning-button
-                                            label="+ Assign Permission Set"
-                                            icon-name="utility:add"
-                                            variant="brand"
-                                            onclick={handlePromptAssignPermSetToUser}
-                                        ></lightning-button>
-                                    </div>
-                                </div>
-
-                                <div class="styled-table-container">
-                                    <table class="custom-data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Label</th>
-                                                <th>API Name</th>
-                                                <th>Type</th>
-                                                <th>License</th>
-                                                <th>Description</th>
-                                                <th class="slds-text-align_right">Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <template lwc:if={hasUserAssignedPermSets}>
-                                                <template for:each={selectedUser.assignedPermissionSets} for:item="ps">
-                                                    <tr key={ps.id}>
-                                                        <td><strong>{ps.label}</strong></td>
-                                                        <td><code>{ps.name}</code></td>
-                                                        <td><span class={ps.typeClass}>{ps.typeBadge}</span></td>
-                                                        <td>{ps.licenseName}</td>
-                                                        <td>{ps.description}</td>
-                                                        <td class="slds-text-align_right">
-                                                            <lightning-button-icon
-                                                                icon-name="utility:delete"
-                                                                alternative-text="Remove Permission Set"
-                                                                title="Remove Assignment"
-                                                                variant="border-filled"
-                                                                data-id={ps.id}
-                                                                data-name={ps.label}
-                                                                onclick={handlePromptRemovePermSetFromUser}
-                                                            ></lightning-button-icon>
-                                                        </td>
-                                                    </tr>
-                                                </template>
-                                            </template>
-                                            <template lwc:else>
-                                                <tr>
-                                                    <td colspan="6" class="slds-text-align_center slds-p-around_large slds-text-color_weak">
-                                                        No standalone permission sets assigned to this user.
-                                                    </td>
-                                                </tr>
-                                            </template>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </lightning-tab>
-
-                            <!-- USER TAB: PERMISSION SET GROUPS -->
-                            <lightning-tab label="Permission Set Groups" value="groups" icon-name="standard:groups">
-                                <div class="section-toolbar">
-                                    <div class="toolbar-filters">
-                                        <span class="slds-text-heading_small slds-m-right_medium">
-                                            Assigned Groups <span class="badge-count">{selectedUser.assignedPermissionSetGroups.length}</span>
-                                        </span>
-                                    </div>
-                                    <div class="toolbar-actions">
-                                        <lightning-button
-                                            label="+ Assign Permission Set Group"
-                                            icon-name="utility:add"
-                                            variant="brand"
-                                            onclick={handlePromptAssignGroupToUser}
-                                        ></lightning-button>
-                                    </div>
-                                </div>
-
-                                <div class="styled-table-container">
-                                    <table class="custom-data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Group Label</th>
-                                                <th>Developer Name</th>
-                                                <th>Status</th>
-                                                <th>Description</th>
-                                                <th class="slds-text-align_right">Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <template lwc:if={hasUserAssignedGroups}>
-                                                <template for:each={selectedUser.assignedPermissionSetGroups} for:item="grp">
-                                                    <tr key={grp.id}>
-                                                        <td><strong>{grp.masterLabel}</strong></td>
-                                                        <td><code>{grp.developerName}</code></td>
-                                                        <td><span class="badge-active">{grp.status}</span></td>
-                                                        <td>{grp.description}</td>
-                                                        <td class="slds-text-align_right">
-                                                            <lightning-button-icon
-                                                                icon-name="utility:delete"
-                                                                alternative-text="Remove Group"
-                                                                title="Remove Group Assignment"
-                                                                variant="border-filled"
-                                                                data-id={grp.id}
-                                                                data-name={grp.masterLabel}
-                                                                onclick={handlePromptRemoveGroupFromUser}
-                                                            ></lightning-button-icon>
-                                                        </td>
-                                                    </tr>
-                                                </template>
-                                            </template>
-                                            <template lwc:else>
-                                                <tr>
-                                                    <td colspan="5" class="slds-text-align_center slds-p-around_large slds-text-color_weak">
-                                                        No permission set groups assigned to this user.
-                                                    </td>
-                                                </tr>
-                                            </template>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </lightning-tab>
-
-                            <!-- USER TAB: EFFECTIVE OBJECT ACCESS -->
-                            <lightning-tab label="Effective Object Access" value="objects" icon-name="standard:entity">
-                                <div class="info-alert-banner">
-                                    <lightning-icon icon-name="utility:info" size="x-small" class="alert-icon"></lightning-icon>
-                                    <div>
-                                        <strong>Consolidated Access Breakdown:</strong> Shows the user's cumulative permissions aggregated across their Profile, directly assigned Permission Sets, and Permission Set Groups.
-                                    </div>
-                                </div>
-
-                                <div class="styled-table-container">
-                                    <table class="custom-data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Object Label</th>
-                                                <th>API Name</th>
-                                                <th class="slds-text-align_center">Read</th>
-                                                <th class="slds-text-align_center">Create</th>
-                                                <th class="slds-text-align_center">Edit</th>
-                                                <th class="slds-text-align_center">Delete</th>
-                                                <th class="slds-text-align_center">View All</th>
-                                                <th class="slds-text-align_center">Modify All</th>
-                                                <th>Permission Sources</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <template for:each={selectedUser.effectiveObjectPermissions} for:item="op">
-                                                <tr key={op.sobjectType}>
-                                                    <td><strong>{op.sobjectLabel}</strong></td>
-                                                    <td><code>{op.sobjectType}</code></td>
-                                                    <td class="slds-text-align_center">
-                                                        <template lwc:if={op.permissionsRead}>
-                                                            <span class="perm-check-true">✓</span>
-                                                        </template>
-                                                        <template lwc:else>
-                                                            <span class="perm-check-false">—</span>
-                                                        </template>
-                                                    </td>
-                                                    <td class="slds-text-align_center">
-                                                        <template lwc:if={op.permissionsCreate}>
-                                                            <span class="perm-check-true">✓</span>
-                                                        </template>
-                                                        <template lwc:else>
-                                                            <span class="perm-check-false">—</span>
-                                                        </template>
-                                                    </td>
-                                                    <td class="slds-text-align_center">
-                                                        <template lwc:if={op.permissionsEdit}>
-                                                            <span class="perm-check-true">✓</span>
-                                                        </template>
-                                                        <template lwc:else>
-                                                            <span class="perm-check-false">—</span>
-                                                        </template>
-                                                    </td>
-                                                    <td class="slds-text-align_center">
-                                                        <template lwc:if={op.permissionsDelete}>
-                                                            <span class="perm-check-true">✓</span>
-                                                        </template>
-                                                        <template lwc:else>
-                                                            <span class="perm-check-false">—</span>
-                                                        </template>
-                                                    </td>
-                                                    <td class="slds-text-align_center">
-                                                        <template lwc:if={op.permissionsViewAllRecords}>
-                                                            <span class="perm-check-true">✓</span>
-                                                        </template>
-                                                        <template lwc:else>
-                                                            <span class="perm-check-false">—</span>
-                                                        </template>
-                                                    </td>
-                                                    <td class="slds-text-align_center">
-                                                        <template lwc:if={op.permissionsModifyAllRecords}>
-                                                            <span class="perm-check-true">✓</span>
-                                                        </template>
-                                                        <template lwc:else>
-                                                            <span class="perm-check-false">—</span>
-                                                        </template>
-                                                    </td>
-                                                    <td><span class="slds-text-body_small">{op.source}</span></td>
-                                                </tr>
-                                            </template>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </lightning-tab>
-                            </main>
-            </div>
+                        <c-admin-access-editor
+                            target-type="User"
+                            target-id={selectedUser.user.userId}
+                            onaccesschange={handleEditorAccessChange}
+                        ></c-admin-access-editor>
                     </template>
 
                     <template lwc:else>
@@ -414,7 +216,7 @@
                         </div>
 
                         <div class="styled-table-container">
-                            <table class="custom-data-table">
+                            <table class="custom-data-table resp-list">
                                 <thead>
                                     <tr>
                                         <th>Name</th>
@@ -431,23 +233,23 @@
                                 <tbody>
                                     <template for:each={usersList} for:item="u">
                                         <tr key={u.userId}>
-                                            <td><strong>{u.name}</strong></td>
-                                            <td><code>{u.username}</code></td>
-                                            <td>{u.email}</td>
-                                            <td><span class="slds-badge slds-theme_shade">{u.profileName}</span></td>
-                                            <td>{u.roleName}</td>
-                                            <td>
+                                            <td data-label="Name"><strong>{u.name}</strong></td>
+                                            <td data-label="Username"><code>{u.username}</code></td>
+                                            <td data-label="Email">{u.email}</td>
+                                            <td data-label="Profile"><span class="slds-badge slds-theme_shade">{u.profileName}</span></td>
+                                            <td data-label="Role">{u.roleName}</td>
+                                            <td data-label="Status">
                                                 <span class={u.statusClass}>
                                                     {u.statusBadge}
                                                 </span>
                                             </td>
-                                            <td><span class="badge-count">{u.permSetCount}</span></td>
-                                            <td><span class="badge-count">{u.permSetGroupCount}</span></td>
-                                            <td class="slds-text-align_right">
+                                            <td data-label="Perm Sets"><span class="badge-count">{u.permSetCount}</span></td>
+                                            <td data-label="Groups"><span class="badge-count">{u.permSetGroupCount}</span></td>
+                                            <td data-label="Action" class="slds-text-align_right">
                                                 <lightning-button
                                                     label="Manage Access"
-                                                    icon-name="utility:preview"
-                                                    variant="neutral"
+                                                    icon-name="utility:edit"
+                                                    variant="brand"
                                                     data-id={u.userId}
                                                     onclick={handleViewUserDetail}
                                                 ></lightning-button>
@@ -979,151 +781,66 @@
                 <template lwc:if={isProfilesTab}>
                     <template lwc:if={selectedProfile}>
                         <!-- PROFILE DETAIL VIEW -->
-                        <div class="detail-hero-banner">
-                            <div class="hero-identity">
-                                <div class="hero-avatar">
-                                    <lightning-icon icon-name="standard:profile" size="medium" variant="inverse"></lightning-icon>
-                                </div>
-                                <div class="hero-title-block">
-                                    <div class="hero-main-title">
-                                        <span>{selectedProfile.profile.name}</span>
-                                        <span class="badge-metadata">Metadata Managed via Setup</span>
+                        <div class="slds-page-header slds-page-header_record-home detail-header">
+                            <div class="slds-page-header__row">
+                                <div class="slds-page-header__col-title">
+                                    <div class="slds-media">
+                                        <div class="slds-media__figure">
+                                            <lightning-icon icon-name="standard:customers" size="medium" alternative-text="Profile"></lightning-icon>
+                                        </div>
+                                        <div class="slds-media__body">
+                                            <div class="slds-page-header__name">
+                                                <div class="slds-page-header__name-title">
+                                                    <h1>
+                                                        <span>Profile</span>
+                                                        <span class="slds-page-header__title slds-truncate" title={selectedProfile.profile.name}>{selectedProfile.profile.name}</span>
+                                                    </h1>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="hero-subtitle">
-                                        <span><strong>User License:</strong> {selectedProfile.profile.userLicenseName}</span>
-                                        <span>•</span>
-                                        <span><strong>User Type:</strong> {selectedProfile.profile.userType}</span>
-                                        <span>•</span>
-                                        <span><strong>Associated Users:</strong> {selectedProfile.profile.userCount}</span>
+                                </div>
+                                <div class="slds-page-header__col-actions">
+                                    <div class="slds-page-header__controls">
+                                        <div class="slds-page-header__control">
+                                            <lightning-button label="View in Setup" icon-name="utility:new_window" onclick={handleOpenProfileSetup}></lightning-button>
+                                        </div>
+                                        <div class="slds-page-header__control">
+                                            <lightning-button label="Back to Profiles" icon-name="utility:back" onclick={handleBackToProfiles}></lightning-button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="hero-actions">
-                                <lightning-button
-                                    label="← Back to Profiles"
-                                    icon-name="utility:back"
-                                    variant="neutral"
-                                    onclick={handleBackToProfiles}
-                                ></lightning-button>
+                            <div class="slds-page-header__row slds-page-header__row_gutters">
+                                <div class="slds-page-header__col-details">
+                                    <ul class="slds-page-header__detail-row detail-fields">
+                                        <li class="slds-page-header__detail-block">
+                                            <div class="slds-text-title slds-truncate">User License</div>
+                                            <div class="slds-truncate">{selectedProfile.profile.userLicenseName}</div>
+                                        </li>
+                                        <li class="slds-page-header__detail-block">
+                                            <div class="slds-text-title slds-truncate">User Type</div>
+                                            <div class="slds-truncate">{selectedProfile.profile.userType}</div>
+                                        </li>
+                                        <li class="slds-page-header__detail-block">
+                                            <div class="slds-text-title slds-truncate">Users</div>
+                                            <div class="slds-truncate">{selectedProfile.profile.userCount}</div>
+                                        </li>
+                                        <li class="slds-page-header__detail-block">
+                                            <div class="slds-text-title slds-truncate">Created</div>
+                                            <div class="slds-truncate">{selectedProfile.profile.createdDateFormatted}</div>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="info-alert-banner">
-                            <lightning-icon icon-name="utility:lock" size="x-small" class="alert-icon"></lightning-icon>
-                            <div>
-                                <strong>Platform Security Rule:</strong> Salesforce Profile definitions and administrative permissions are managed through Salesforce Setup metadata. View the current security policies and associated users below.
-                            </div>
-                        </div>
-
-                        <!-- PROFILE SUB-TABS -->
-                        <lightning-tabset variant="scoped" active-tab-value={selectedProfileSubTab} onselect={handleProfileSubTabChange}>
-                            <lightning-tab label="Associated Users" value="users" icon-name="standard:user">
-                                <div class="styled-table-container">
-                                    <table class="custom-data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Name</th>
-                                                <th>Username</th>
-                                                <th>Email</th>
-                                                <th>Role</th>
-                                                <th>Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <template for:each={selectedProfile.associatedUsers} for:item="u">
-                                                <tr key={u.userId}>
-                                                    <td><strong>{u.name}</strong></td>
-                                                    <td><code>{u.username}</code></td>
-                                                    <td>{u.email}</td>
-                                                    <td>{u.roleName}</td>
-                                                    <td><span class={u.statusClass}>{u.statusBadge}</span></td>
-                                                </tr>
-                                            </template>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </lightning-tab>
-
-                            <lightning-tab label="Object Permissions" value="objects" icon-name="standard:entity">
-                                <div class="styled-table-container">
-                                    <table class="custom-data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Object</th>
-                                                <th>API Name</th>
-                                                <th class="slds-text-align_center">Read</th>
-                                                <th class="slds-text-align_center">Create</th>
-                                                <th class="slds-text-align_center">Edit</th>
-                                                <th class="slds-text-align_center">Delete</th>
-                                                <th class="slds-text-align_center">View All</th>
-                                                <th class="slds-text-align_center">Modify All</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <template for:each={selectedProfile.objectPermissions} for:item="op">
-                                                <tr key={op.sobjectType}>
-                                                    <td><strong>{op.sobjectLabel}</strong></td>
-                                                    <td><code>{op.sobjectType}</code></td>
-                                                    <td class="slds-text-align_center">
-                                                        <template lwc:if={op.permissionsRead}><span class="perm-check-true">✓</span></template>
-                                                        <template lwc:else><span class="perm-check-false">—</span></template>
-                                                    </td>
-                                                    <td class="slds-text-align_center">
-                                                        <template lwc:if={op.permissionsCreate}><span class="perm-check-true">✓</span></template>
-                                                        <template lwc:else><span class="perm-check-false">—</span></template>
-                                                    </td>
-                                                    <td class="slds-text-align_center">
-                                                        <template lwc:if={op.permissionsEdit}><span class="perm-check-true">✓</span></template>
-                                                        <template lwc:else><span class="perm-check-false">—</span></template>
-                                                    </td>
-                                                    <td class="slds-text-align_center">
-                                                        <template lwc:if={op.permissionsDelete}><span class="perm-check-true">✓</span></template>
-                                                        <template lwc:else><span class="perm-check-false">—</span></template>
-                                                    </td>
-                                                    <td class="slds-text-align_center">
-                                                        <template lwc:if={op.permissionsViewAllRecords}><span class="perm-check-true">✓</span></template>
-                                                        <template lwc:else><span class="perm-check-false">—</span></template>
-                                                    </td>
-                                                    <td class="slds-text-align_center">
-                                                        <template lwc:if={op.permissionsModifyAllRecords}><span class="perm-check-true">✓</span></template>
-                                                        <template lwc:else><span class="perm-check-false">—</span></template>
-                                                    </td>
-                                                </tr>
-                                            </template>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </lightning-tab>
-
-                            <lightning-tab label="Key Administrative Privileges" value="system" icon-name="standard:custom_notification">
-                                <div class="styled-table-container">
-                                    <table class="custom-data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Permission Name</th>
-                                                <th>Category</th>
-                                                <th>Description</th>
-                                                <th class="slds-text-align_center">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <template for:each={selectedProfile.systemPermissions} for:item="sp">
-                                                <tr key={sp.name}>
-                                                    <td><strong>{sp.label}</strong></td>
-                                                    <td><span class="slds-badge slds-theme_shade">{sp.category}</span></td>
-                                                    <td>{sp.description}</td>
-                                                    <td class="slds-text-align_center">
-                                                        <span class={sp.statusClass}>
-                                                            {sp.statusLabel}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            </template>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </lightning-tab>
-                        </lightning-tabset>
+                        <c-admin-access-editor
+                            target-type="Profile"
+                            target-id={selectedProfile.profile.id}
+                            onopenuser={handleEditorOpenUser}
+                            onaccesschange={handleEditorAccessChange}
+                        ></c-admin-access-editor>
                     </template>
 
                     <template lwc:else>
@@ -1149,7 +866,7 @@
                         </div>
 
                         <div class="styled-table-container">
-                            <table class="custom-data-table">
+                            <table class="custom-data-table resp-list">
                                 <thead>
                                     <tr>
                                         <th>Profile Name</th>
@@ -1163,16 +880,16 @@
                                 <tbody>
                                     <template for:each={profilesList} for:item="p">
                                         <tr key={p.id}>
-                                            <td><strong>{p.name}</strong></td>
-                                            <td>{p.userLicenseName}</td>
-                                            <td>{p.userType}</td>
-                                            <td><span class="badge-count">{p.userCount}</span></td>
-                                            <td>{p.description}</td>
-                                            <td class="slds-text-align_right">
+                                            <td data-label="Profile Name"><strong>{p.name}</strong></td>
+                                            <td data-label="User License">{p.userLicenseName}</td>
+                                            <td data-label="User Type">{p.userType}</td>
+                                            <td data-label="Users"><span class="badge-count">{p.userCount}</span></td>
+                                            <td data-label="Description">{p.description}</td>
+                                            <td data-label="Action" class="slds-text-align_right">
                                                 <lightning-button
-                                                    label="Inspect Profile"
-                                                    icon-name="utility:preview"
-                                                    variant="neutral"
+                                                    label="Manage Access"
+                                                    icon-name="utility:edit"
+                                                    variant="brand"
                                                     data-id={p.id}
                                                     onclick={handleViewProfileDetail}
                                                 ></lightning-button>
@@ -1477,8 +1194,39 @@
                         </table>
                     </div>
                 </template>
-            </lightning-tabset>
+                </main>
+            </div>
         </div>
+
+        <!-- ============================================================== -->
+        <!-- CHANGE USER PROFILE                                            -->
+        <!-- ============================================================== -->
+        <template lwc:if={showProfileModal}>
+            <section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="change-profile-heading" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <div class="slds-modal__header">
+                        <h1 id="change-profile-heading" class="slds-modal__title slds-hyphenate">Change Profile</h1>
+                    </div>
+                    <div class="slds-modal__content slds-p-around_medium">
+                        <p class="slds-m-bottom_small">
+                            Select the new profile for {selectedUser.user.name}. The profile sets their baseline object, field, app and system access.
+                        </p>
+                        <lightning-combobox
+                            label="Profile"
+                            value={newProfileId}
+                            options={assignableProfileOptions}
+                            onchange={handleNewProfileChange}
+                            required
+                        ></lightning-combobox>
+                    </div>
+                    <div class="slds-modal__footer">
+                        <lightning-button label="Cancel" onclick={handleCloseProfileModal}></lightning-button>
+                        <lightning-button label="Save" variant="brand" class="slds-m-left_x-small" onclick={handleSaveUserProfile} disabled={profileSaveDisabled}></lightning-button>
+                    </div>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+        </template>
 
         <!-- ============================================================== -->
         <!-- CONFIRMATION MODAL                                             -->
