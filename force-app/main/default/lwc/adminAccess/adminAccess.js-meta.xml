@@ -1,9 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
     <apiVersion>60.0</apiVersion>
     <isExposed>true</isExposed>
     <masterLabel>Admin Access</masterLabel>
-    <description>Centralized Salesforce administrative console for managing security, user access, permission sets, permission set groups, profiles, object access, field-level security, and apps.</description>
+    <description
+  >Centralized Salesforce administrative console for managing security, user access, permission sets, permission set groups, profiles, object access, field-level security, and apps.</description>
     <targets>
         <target>lightning__AppPage</target>
         <target>lightning__HomePage</target>

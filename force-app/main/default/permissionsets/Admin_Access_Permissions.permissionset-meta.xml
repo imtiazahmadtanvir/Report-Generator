@@ -1,8 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
-    <hasActivationRequired>false</hasActivationRequired>
-    <label>Admin Access Console Permission</label>
-    <description>Grants access to the Admin Access Console Apex controllers and custom tabs.</description>
+    <applicationVisibilities>
+        <application>Report_Admin_System</application>
+        <visible>true</visible>
+    </applicationVisibilities>
     <classAccesses>
         <apexClass>AdminAccessController</apexClass>
         <enabled>true</enabled>
@@ -16,21 +17,21 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>AdminSecurityService</apexClass>
+        <apexClass>AdminSecurityDataModel</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>AdminSecurityDataModel</apexClass>
+        <apexClass>AdminSecurityService</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
         <apexClass>UserRecordPdfController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
-    <applicationVisibilities>
-        <application>Report_Admin_System</application>
-        <visible>true</visible>
-    </applicationVisibilities>
+    <description
+  >Grants access to the Admin Access Console Apex controllers and custom tabs.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Admin Access Console Permission</label>
     <tabSettings>
         <tab>Admin_Access</tab>
         <visibility>Visible</visibility>

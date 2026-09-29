@@ -1,532 +1,1044 @@
 <template>
-    <div class="editor">
-        <template lwc:if={isBusy}>
-            <lightning-spinner alternative-text="Loading access" size="small"></lightning-spinner>
-        </template>
+  <div class="editor">
+    <template lwc:if={isBusy}>
+      <lightning-spinner
+        alternative-text="Loading access"
+        size="small"
+      ></lightning-spinner>
+    </template>
 
-        <!-- WHERE CHANGES ARE SAVED -->
-        <template lwc:if={context}>
-            <div class="scope-note">
-                <lightning-icon icon-name="utility:info" size="x-small" class="scope-note__icon"></lightning-icon>
-                <p>{saveTargetText}</p>
+    <!-- WHERE CHANGES ARE SAVED -->
+    <template lwc:if={context}>
+      <div class="scope-note">
+        <lightning-icon
+          icon-name="utility:info"
+          size="x-small"
+          class="scope-note__icon"
+        ></lightning-icon>
+        <p>{saveTargetText}</p>
+      </div>
+      <template lwc:if={context.readOnlyReason}>
+        <div class="scope-note scope-note_warning">
+          <lightning-icon
+            icon-name="utility:warning"
+            size="x-small"
+            class="scope-note__icon"
+          ></lightning-icon>
+          <p>{context.readOnlyReason}</p>
+        </div>
+      </template>
+    </template>
+
+    <!-- CATEGORY NAVIGATION (icon pills) -->
+    <nav class="cat-nav" role="tablist" aria-label="Access categories">
+      <template for:each={navTabs} for:item="tab">
+        <button
+          key={tab.value}
+          class={tab.cssClass}
+          data-tab={tab.value}
+          role="tab"
+          aria-selected={tab.selected}
+          onclick={handleNavClick}
+          title={tab.label}
+        >
+          <lightning-icon
+            icon-name={tab.icon}
+            size="x-small"
+            variant={tab.iconVariant}
+            class="cat-pill__icon"
+          ></lightning-icon>
+          <span class="cat-pill__label">{tab.label}</span>
+        </button>
+      </template>
+    </nav>
+
+    <div class="editor-body">
+      <!-- SECTION HEADER -->
+      <div class="section-head">
+        <div class="section-head__icon">
+          <lightning-icon
+            icon-name={sectionMeta.icon}
+            size="small"
+            variant="inverse"
+          ></lightning-icon>
+        </div>
+        <div class="section-head__text">
+          <h2 class="section-head__title">{sectionMeta.title}</h2>
+          <p class="section-head__subtitle">{sectionMeta.subtitle}</p>
+        </div>
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- OBJECTS                                                  -->
+      <!-- ======================================================= -->
+      <template lwc:if={isObjectsTab}>
+        <lightning-layout multiple-rows vertical-align="end" class="filter-bar">
+          <lightning-layout-item
+            size="12"
+            medium-device-size="5"
+            padding="horizontal-small"
+          >
+            <lightning-input
+              type="search"
+              label="Search objects"
+              placeholder="Object name or API name"
+              value={objectFilters.search}
+              data-tab="objects"
+              data-filter="search"
+              onchange={handleFilterChange}
+            ></lightning-input>
+          </lightning-layout-item>
+          <lightning-layout-item
+            size="6"
+            medium-device-size="3"
+            padding="horizontal-small"
+          >
+            <lightning-combobox
+              label="Object type"
+              value={objectFilters.type}
+              options={standardCustomOptions}
+              data-tab="objects"
+              data-filter="type"
+              onchange={handleFilterChange}
+            ></lightning-combobox>
+          </lightning-layout-item>
+          <lightning-layout-item
+            size="6"
+            medium-device-size="3"
+            padding="horizontal-small"
+          >
+            <lightning-combobox
+              label="Access"
+              value={objectFilters.access}
+              options={accessOptions}
+              data-tab="objects"
+              data-filter="access"
+              onchange={handleFilterChange}
+            ></lightning-combobox>
+          </lightning-layout-item>
+        </lightning-layout>
+        <p class="result-count">{objectView.summary}</p>
+
+        <div class="table-scroll">
+          <table
+            class="slds-table slds-table_cell-buffer slds-table_bordered resp-table"
+            aria-label="Object permissions"
+          >
+            <thead>
+              <tr class="slds-line-height_reset">
+                <th scope="col"><div class="slds-truncate">Object</div></th>
+                <template for:each={objectPermColumns} for:item="col">
+                  <th key={col.key} scope="col" class="slds-text-align_center">
+                    <div class="slds-truncate">{col.label}</div>
+                  </th>
+                </template>
+                <th scope="col"><div class="slds-truncate">Granted by</div></th>
+                <th scope="col" class="slds-text-align_right">
+                  <span class="slds-assistive-text">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <template for:each={objectView.rows} for:item="row">
+                <tr key={row.sobjectType} class={row.rowClass}>
+                  <th scope="row" data-label="Object">
+                    <div class="slds-truncate cell-title" title={row.label}>
+                      {row.label}
+                    </div>
+                    <div class="slds-truncate cell-sub">
+                      {row.sobjectType}
+                      <template lwc:if={row.isCustom}
+                        ><span class="tag tag_custom">Custom</span></template
+                      >
+                    </div>
+                  </th>
+                  <template for:each={row.cells} for:item="cell">
+                    <td
+                      key={cell.key}
+                      data-label={cell.label}
+                      class="slds-text-align_center perm-cell"
+                    >
+                      <div class="slds-checkbox">
+                        <input
+                          type="checkbox"
+                          id={cell.id}
+                          checked={cell.checked}
+                          disabled={cell.disabled}
+                          data-object={row.sobjectType}
+                          data-perm={cell.key}
+                          onchange={handleObjectCheck}
+                        />
+                        <label
+                          class="slds-checkbox__label"
+                          for={cell.id}
+                          title={cell.title}
+                        >
+                          <span class="slds-checkbox_faux"></span>
+                          <span class="slds-assistive-text"
+                            >{cell.label} {row.label}</span
+                          >
+                        </label>
+                      </div>
+                    </td>
+                  </template>
+                  <td data-label="Granted by">
+                    <div
+                      class="slds-truncate cell-sub sources-cell"
+                      title={row.sources}
+                    >
+                      {row.sourcesLabel}
+                    </div>
+                  </td>
+                  <td data-label="Fields" class="slds-text-align_right">
+                    <lightning-button-icon
+                      icon-name="utility:rows"
+                      variant="border-filled"
+                      size="small"
+                      alternative-text="Field permissions"
+                      title="Edit field permissions"
+                      data-object={row.sobjectType}
+                      onclick={handleOpenFields}
+                    ></lightning-button-icon>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <template lwc:if={objectView.isEmpty}>
+            <div class="empty-state">
+              <lightning-icon
+                icon-name="utility:search"
+                size="small"
+                class="empty-state__icon"
+              ></lightning-icon>
+              <p>No objects match these filters.</p>
             </div>
-            <template lwc:if={context.readOnlyReason}>
-                <div class="scope-note scope-note_warning">
-                    <lightning-icon icon-name="utility:warning" size="x-small" class="scope-note__icon"></lightning-icon>
-                    <p>{context.readOnlyReason}</p>
-                </div>
-            </template>
+          </template>
+        </div>
+        <template lwc:if={objectView.hasMore}>
+          <div class="show-more">
+            <lightning-button
+              label="Show more"
+              icon-name="utility:chevrondown"
+              data-tab="objects"
+              onclick={handleShowMore}
+            ></lightning-button>
+          </div>
         </template>
+      </template>
 
-        <!-- CATEGORY NAVIGATION (icon pills) -->
-        <nav class="cat-nav" role="tablist" aria-label="Access categories">
-            <template for:each={navTabs} for:item="tab">
-                <button key={tab.value} class={tab.cssClass} data-tab={tab.value} role="tab"
-                    aria-selected={tab.selected} onclick={handleNavClick} title={tab.label}>
-                    <lightning-icon icon-name={tab.icon} size="x-small" variant={tab.iconVariant} class="cat-pill__icon"></lightning-icon>
-                    <span class="cat-pill__label">{tab.label}</span>
-                </button>
-            </template>
-        </nav>
+      <!-- ======================================================= -->
+      <!-- FIELDS                                                   -->
+      <!-- ======================================================= -->
+      <template lwc:if={isFieldsTab}>
+        <lightning-layout multiple-rows vertical-align="end" class="filter-bar">
+          <lightning-layout-item
+            size="12"
+            medium-device-size="4"
+            padding="horizontal-small"
+          >
+            <lightning-combobox
+              label="Object"
+              value={fieldObject}
+              options={fieldObjectOptions}
+              placeholder="Select an object"
+              onchange={handleFieldObjectChange}
+            ></lightning-combobox>
+          </lightning-layout-item>
+          <lightning-layout-item
+            size="12"
+            medium-device-size="4"
+            padding="horizontal-small"
+          >
+            <lightning-input
+              type="search"
+              label="Search fields"
+              placeholder="Field label or API name"
+              value={fieldFilters.search}
+              data-tab="fields"
+              data-filter="search"
+              onchange={handleFilterChange}
+            ></lightning-input>
+          </lightning-layout-item>
+          <lightning-layout-item
+            size="6"
+            medium-device-size="2"
+            padding="horizontal-small"
+          >
+            <lightning-combobox
+              label="Field type"
+              value={fieldFilters.type}
+              options={standardCustomOptions}
+              data-tab="fields"
+              data-filter="type"
+              onchange={handleFilterChange}
+            ></lightning-combobox>
+          </lightning-layout-item>
+          <lightning-layout-item
+            size="6"
+            medium-device-size="2"
+            padding="horizontal-small"
+          >
+            <lightning-combobox
+              label="Access"
+              value={fieldFilters.access}
+              options={accessOptions}
+              data-tab="fields"
+              data-filter="access"
+              onchange={handleFilterChange}
+            ></lightning-combobox>
+          </lightning-layout-item>
+        </lightning-layout>
+        <p class="result-count">{fieldView.summary}</p>
 
-        <div class="editor-body">
-            <!-- SECTION HEADER -->
-            <div class="section-head">
-                <div class="section-head__icon">
-                    <lightning-icon icon-name={sectionMeta.icon} size="small" variant="inverse"></lightning-icon>
-                </div>
-                <div class="section-head__text">
-                    <h2 class="section-head__title">{sectionMeta.title}</h2>
-                    <p class="section-head__subtitle">{sectionMeta.subtitle}</p>
-                </div>
+        <div class="table-scroll">
+          <table
+            class="slds-table slds-table_cell-buffer slds-table_bordered resp-table"
+            aria-label="Field permissions"
+          >
+            <thead>
+              <tr class="slds-line-height_reset">
+                <th scope="col"><div class="slds-truncate">Field</div></th>
+                <th scope="col"><div class="slds-truncate">Data type</div></th>
+                <th scope="col" class="slds-text-align_center">
+                  <div class="slds-truncate">Read</div>
+                </th>
+                <th scope="col" class="slds-text-align_center">
+                  <div class="slds-truncate">Edit</div>
+                </th>
+                <th scope="col"><div class="slds-truncate">Granted by</div></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template for:each={fieldView.rows} for:item="row">
+                <tr key={row.field} class={row.rowClass}>
+                  <th scope="row" data-label="Field">
+                    <div class="slds-truncate cell-title" title={row.label}>
+                      {row.label}
+                    </div>
+                    <div class="slds-truncate cell-sub">
+                      {row.apiName}
+                      <template lwc:if={row.isCustom}
+                        ><span class="tag tag_custom">Custom</span></template
+                      >
+                    </div>
+                  </th>
+                  <td data-label="Data type">
+                    <div class="slds-truncate cell-sub">{row.dataType}</div>
+                  </td>
+                  <template for:each={row.cells} for:item="cell">
+                    <td
+                      key={cell.key}
+                      data-label={cell.label}
+                      class="slds-text-align_center perm-cell"
+                    >
+                      <div class="slds-checkbox">
+                        <input
+                          type="checkbox"
+                          id={cell.id}
+                          checked={cell.checked}
+                          disabled={cell.disabled}
+                          data-field={row.field}
+                          data-perm={cell.key}
+                          onchange={handleFieldCheck}
+                        />
+                        <label
+                          class="slds-checkbox__label"
+                          for={cell.id}
+                          title={cell.title}
+                        >
+                          <span class="slds-checkbox_faux"></span>
+                          <span class="slds-assistive-text"
+                            >{cell.label} {row.label}</span
+                          >
+                        </label>
+                      </div>
+                    </td>
+                  </template>
+                  <td data-label="Granted by">
+                    <div
+                      class="slds-truncate cell-sub sources-cell"
+                      title={row.sources}
+                    >
+                      {row.sourcesLabel}
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <template lwc:if={fieldView.isEmpty}>
+            <div class="empty-state">
+              <lightning-icon
+                icon-name="utility:search"
+                size="small"
+                class="empty-state__icon"
+              ></lightning-icon>
+              <p>No fields match these filters.</p>
             </div>
+          </template>
+        </div>
+        <template lwc:if={fieldView.hasMore}>
+          <div class="show-more">
+            <lightning-button
+              label="Show more"
+              icon-name="utility:chevrondown"
+              data-tab="fields"
+              onclick={handleShowMore}
+            ></lightning-button>
+          </div>
+        </template>
+      </template>
 
-            <!-- ======================================================= -->
-            <!-- OBJECTS                                                  -->
-            <!-- ======================================================= -->
-            <template lwc:if={isObjectsTab}>
-                <lightning-layout multiple-rows vertical-align="end" class="filter-bar">
-                    <lightning-layout-item size="12" medium-device-size="5" padding="horizontal-small">
-                        <lightning-input type="search" label="Search objects" placeholder="Object name or API name" value={objectFilters.search} data-tab="objects" data-filter="search" onchange={handleFilterChange}></lightning-input>
-                    </lightning-layout-item>
-                    <lightning-layout-item size="6" medium-device-size="3" padding="horizontal-small">
-                        <lightning-combobox label="Object type" value={objectFilters.type} options={standardCustomOptions} data-tab="objects" data-filter="type" onchange={handleFilterChange}></lightning-combobox>
-                    </lightning-layout-item>
-                    <lightning-layout-item size="6" medium-device-size="3" padding="horizontal-small">
-                        <lightning-combobox label="Access" value={objectFilters.access} options={accessOptions} data-tab="objects" data-filter="access" onchange={handleFilterChange}></lightning-combobox>
-                    </lightning-layout-item>
-                </lightning-layout>
-                <p class="result-count">{objectView.summary}</p>
+      <!-- ======================================================= -->
+      <!-- PERMISSION SETS / PERMISSION SET GROUPS                  -->
+      <!-- ======================================================= -->
+      <template lwc:if={isAssignmentTab}>
+        <lightning-layout multiple-rows vertical-align="end" class="filter-bar">
+          <lightning-layout-item
+            size="12"
+            medium-device-size="6"
+            padding="horizontal-small"
+          >
+            <lightning-input
+              type="search"
+              label="Search"
+              placeholder="Label or API name"
+              value={assignmentFilters.search}
+              data-tab={activeTab}
+              data-filter="search"
+              onchange={handleFilterChange}
+            ></lightning-input>
+          </lightning-layout-item>
+          <lightning-layout-item
+            size="12"
+            medium-device-size="3"
+            padding="horizontal-small"
+          >
+            <lightning-combobox
+              label="Assignment"
+              value={assignmentFilters.access}
+              options={assignedOptions}
+              data-tab={activeTab}
+              data-filter="access"
+              onchange={handleFilterChange}
+            ></lightning-combobox>
+          </lightning-layout-item>
+        </lightning-layout>
+        <p class="result-count">{assignmentView.summary}</p>
 
-                <div class="table-scroll">
-                    <table class="slds-table slds-table_cell-buffer slds-table_bordered resp-table" aria-label="Object permissions">
-                        <thead>
-                            <tr class="slds-line-height_reset">
-                                <th scope="col"><div class="slds-truncate">Object</div></th>
-                                <template for:each={objectPermColumns} for:item="col">
-                                    <th key={col.key} scope="col" class="slds-text-align_center"><div class="slds-truncate">{col.label}</div></th>
-                                </template>
-                                <th scope="col"><div class="slds-truncate">Granted by</div></th>
-                                <th scope="col" class="slds-text-align_right"><span class="slds-assistive-text">Actions</span></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template for:each={objectView.rows} for:item="row">
-                                <tr key={row.sobjectType} class={row.rowClass}>
-                                    <th scope="row" data-label="Object">
-                                        <div class="slds-truncate cell-title" title={row.label}>{row.label}</div>
-                                        <div class="slds-truncate cell-sub">
-                                            {row.sobjectType}
-                                            <template lwc:if={row.isCustom}><span class="tag tag_custom">Custom</span></template>
-                                        </div>
-                                    </th>
-                                    <template for:each={row.cells} for:item="cell">
-                                        <td key={cell.key} data-label={cell.label} class="slds-text-align_center perm-cell">
-                                            <div class="slds-checkbox">
-                                                <input type="checkbox" id={cell.id} checked={cell.checked} disabled={cell.disabled}
-                                                    data-object={row.sobjectType} data-perm={cell.key} onchange={handleObjectCheck} />
-                                                <label class="slds-checkbox__label" for={cell.id} title={cell.title}>
-                                                    <span class="slds-checkbox_faux"></span>
-                                                    <span class="slds-assistive-text">{cell.label} {row.label}</span>
-                                                </label>
-                                            </div>
-                                        </td>
-                                    </template>
-                                    <td data-label="Granted by"><div class="slds-truncate cell-sub sources-cell" title={row.sources}>{row.sourcesLabel}</div></td>
-                                    <td data-label="Fields" class="slds-text-align_right">
-                                        <lightning-button-icon icon-name="utility:rows" variant="border-filled" size="small"
-                                            alternative-text="Field permissions" title="Edit field permissions"
-                                            data-object={row.sobjectType} onclick={handleOpenFields}></lightning-button-icon>
-                                    </td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                    <template lwc:if={objectView.isEmpty}>
-                        <div class="empty-state">
-                            <lightning-icon icon-name="utility:search" size="small" class="empty-state__icon"></lightning-icon>
-                            <p>No objects match these filters.</p>
-                        </div>
-                    </template>
-                </div>
-                <template lwc:if={objectView.hasMore}>
-                    <div class="show-more">
-                        <lightning-button label="Show more" icon-name="utility:chevrondown" data-tab="objects" onclick={handleShowMore}></lightning-button>
+        <div class="table-scroll">
+          <table
+            class="slds-table slds-table_cell-buffer slds-table_bordered resp-table"
+            aria-label="Assignments"
+          >
+            <thead>
+              <tr class="slds-line-height_reset">
+                <th scope="col"><div class="slds-truncate">Name</div></th>
+                <th scope="col"><div class="slds-truncate">Type</div></th>
+                <th scope="col">
+                  <div class="slds-truncate">{assignmentStatusHeader}</div>
+                </th>
+                <th scope="col">
+                  <div class="slds-truncate">Current access</div>
+                </th>
+                <th scope="col" class="slds-text-align_right">
+                  <div class="slds-truncate">Actions</div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <template for:each={assignmentView.rows} for:item="row">
+                <tr key={row.id}>
+                  <th scope="row" data-label="Name">
+                    <div class="slds-truncate cell-title" title={row.label}>
+                      {row.label}
                     </div>
-                </template>
-            </template>
-
-            <!-- ======================================================= -->
-            <!-- FIELDS                                                   -->
-            <!-- ======================================================= -->
-            <template lwc:if={isFieldsTab}>
-                <lightning-layout multiple-rows vertical-align="end" class="filter-bar">
-                    <lightning-layout-item size="12" medium-device-size="4" padding="horizontal-small">
-                        <lightning-combobox label="Object" value={fieldObject} options={fieldObjectOptions} placeholder="Select an object" onchange={handleFieldObjectChange}></lightning-combobox>
-                    </lightning-layout-item>
-                    <lightning-layout-item size="12" medium-device-size="4" padding="horizontal-small">
-                        <lightning-input type="search" label="Search fields" placeholder="Field label or API name" value={fieldFilters.search} data-tab="fields" data-filter="search" onchange={handleFilterChange}></lightning-input>
-                    </lightning-layout-item>
-                    <lightning-layout-item size="6" medium-device-size="2" padding="horizontal-small">
-                        <lightning-combobox label="Field type" value={fieldFilters.type} options={standardCustomOptions} data-tab="fields" data-filter="type" onchange={handleFilterChange}></lightning-combobox>
-                    </lightning-layout-item>
-                    <lightning-layout-item size="6" medium-device-size="2" padding="horizontal-small">
-                        <lightning-combobox label="Access" value={fieldFilters.access} options={accessOptions} data-tab="fields" data-filter="access" onchange={handleFilterChange}></lightning-combobox>
-                    </lightning-layout-item>
-                </lightning-layout>
-                <p class="result-count">{fieldView.summary}</p>
-
-                <div class="table-scroll">
-                    <table class="slds-table slds-table_cell-buffer slds-table_bordered resp-table" aria-label="Field permissions">
-                        <thead>
-                            <tr class="slds-line-height_reset">
-                                <th scope="col"><div class="slds-truncate">Field</div></th>
-                                <th scope="col"><div class="slds-truncate">Data type</div></th>
-                                <th scope="col" class="slds-text-align_center"><div class="slds-truncate">Read</div></th>
-                                <th scope="col" class="slds-text-align_center"><div class="slds-truncate">Edit</div></th>
-                                <th scope="col"><div class="slds-truncate">Granted by</div></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template for:each={fieldView.rows} for:item="row">
-                                <tr key={row.field} class={row.rowClass}>
-                                    <th scope="row" data-label="Field">
-                                        <div class="slds-truncate cell-title" title={row.label}>{row.label}</div>
-                                        <div class="slds-truncate cell-sub">
-                                            {row.apiName}
-                                            <template lwc:if={row.isCustom}><span class="tag tag_custom">Custom</span></template>
-                                        </div>
-                                    </th>
-                                    <td data-label="Data type"><div class="slds-truncate cell-sub">{row.dataType}</div></td>
-                                    <template for:each={row.cells} for:item="cell">
-                                        <td key={cell.key} data-label={cell.label} class="slds-text-align_center perm-cell">
-                                            <div class="slds-checkbox">
-                                                <input type="checkbox" id={cell.id} checked={cell.checked} disabled={cell.disabled}
-                                                    data-field={row.field} data-perm={cell.key} onchange={handleFieldCheck} />
-                                                <label class="slds-checkbox__label" for={cell.id} title={cell.title}>
-                                                    <span class="slds-checkbox_faux"></span>
-                                                    <span class="slds-assistive-text">{cell.label} {row.label}</span>
-                                                </label>
-                                            </div>
-                                        </td>
-                                    </template>
-                                    <td data-label="Granted by"><div class="slds-truncate cell-sub sources-cell" title={row.sources}>{row.sourcesLabel}</div></td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                    <template lwc:if={fieldView.isEmpty}>
-                        <div class="empty-state">
-                            <lightning-icon icon-name="utility:search" size="small" class="empty-state__icon"></lightning-icon>
-                            <p>No fields match these filters.</p>
-                        </div>
-                    </template>
-                </div>
-                <template lwc:if={fieldView.hasMore}>
-                    <div class="show-more">
-                        <lightning-button label="Show more" icon-name="utility:chevrondown" data-tab="fields" onclick={handleShowMore}></lightning-button>
+                    <div class="slds-truncate cell-sub" title={row.description}>
+                      {row.apiName}
                     </div>
-                </template>
-            </template>
-
-            <!-- ======================================================= -->
-            <!-- PERMISSION SETS / PERMISSION SET GROUPS                  -->
-            <!-- ======================================================= -->
-            <template lwc:if={isAssignmentTab}>
-                <lightning-layout multiple-rows vertical-align="end" class="filter-bar">
-                    <lightning-layout-item size="12" medium-device-size="6" padding="horizontal-small">
-                        <lightning-input type="search" label="Search" placeholder="Label or API name" value={assignmentFilters.search} data-tab={activeTab} data-filter="search" onchange={handleFilterChange}></lightning-input>
-                    </lightning-layout-item>
-                    <lightning-layout-item size="12" medium-device-size="3" padding="horizontal-small">
-                        <lightning-combobox label="Assignment" value={assignmentFilters.access} options={assignedOptions} data-tab={activeTab} data-filter="access" onchange={handleFilterChange}></lightning-combobox>
-                    </lightning-layout-item>
-                </lightning-layout>
-                <p class="result-count">{assignmentView.summary}</p>
-
-                <div class="table-scroll">
-                    <table class="slds-table slds-table_cell-buffer slds-table_bordered resp-table" aria-label="Assignments">
-                        <thead>
-                            <tr class="slds-line-height_reset">
-                                <th scope="col"><div class="slds-truncate">Name</div></th>
-                                <th scope="col"><div class="slds-truncate">Type</div></th>
-                                <th scope="col"><div class="slds-truncate">{assignmentStatusHeader}</div></th>
-                                <th scope="col"><div class="slds-truncate">Current access</div></th>
-                                <th scope="col" class="slds-text-align_right"><div class="slds-truncate">Actions</div></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template for:each={assignmentView.rows} for:item="row">
-                                <tr key={row.id}>
-                                    <th scope="row" data-label="Name">
-                                        <div class="slds-truncate cell-title" title={row.label}>{row.label}</div>
-                                        <div class="slds-truncate cell-sub" title={row.description}>{row.apiName}</div>
-                                    </th>
-                                    <td data-label="Type"><span class="tag">{row.typeLabel}</span></td>
-                                    <td data-label="Detail"><div class="slds-truncate cell-sub">{row.status}</div></td>
-                                    <td data-label="Current access"><span class={row.badgeClass}>{row.assignedLabel}</span></td>
-                                    <td data-label="Actions" class="slds-text-align_right">
-                                        <div class="row-actions">
-                                            <template lwc:if={row.showAssign}>
-                                                <lightning-button label={row.assignLabel} icon-name="utility:add" variant="brand-outline"
-                                                    data-id={row.id} data-name={row.label} data-assign="true" onclick={handleAssignment}></lightning-button>
-                                            </template>
-                                            <template lwc:if={row.showRemove}>
-                                                <lightning-button label={row.removeLabel} icon-name="utility:dash" variant="destructive-text"
-                                                    data-id={row.id} data-name={row.label} data-assign="false" onclick={handleAssignment}></lightning-button>
-                                            </template>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                    <template lwc:if={assignmentView.isEmpty}>
-                        <div class="empty-state">
-                            <lightning-icon icon-name="utility:search" size="small" class="empty-state__icon"></lightning-icon>
-                            <p>Nothing matches these filters.</p>
-                        </div>
-                    </template>
-                </div>
-                <template lwc:if={assignmentView.hasMore}>
-                    <div class="show-more">
-                        <lightning-button label="Show more" icon-name="utility:chevrondown" data-tab={activeTab} onclick={handleShowMore}></lightning-button>
+                  </th>
+                  <td data-label="Type">
+                    <span class="tag">{row.typeLabel}</span>
+                  </td>
+                  <td data-label="Detail">
+                    <div class="slds-truncate cell-sub">{row.status}</div>
+                  </td>
+                  <td data-label="Current access">
+                    <span class={row.badgeClass}>{row.assignedLabel}</span>
+                  </td>
+                  <td data-label="Actions" class="slds-text-align_right">
+                    <div class="row-actions">
+                      <template lwc:if={row.showAssign}>
+                        <lightning-button
+                          label={row.assignLabel}
+                          icon-name="utility:add"
+                          variant="brand-outline"
+                          data-id={row.id}
+                          data-name={row.label}
+                          data-assign="true"
+                          onclick={handleAssignment}
+                        ></lightning-button>
+                      </template>
+                      <template lwc:if={row.showRemove}>
+                        <lightning-button
+                          label={row.removeLabel}
+                          icon-name="utility:dash"
+                          variant="destructive-text"
+                          data-id={row.id}
+                          data-name={row.label}
+                          data-assign="false"
+                          onclick={handleAssignment}
+                        ></lightning-button>
+                      </template>
                     </div>
-                </template>
-            </template>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <template lwc:if={assignmentView.isEmpty}>
+            <div class="empty-state">
+              <lightning-icon
+                icon-name="utility:search"
+                size="small"
+                class="empty-state__icon"
+              ></lightning-icon>
+              <p>Nothing matches these filters.</p>
+            </div>
+          </template>
+        </div>
+        <template lwc:if={assignmentView.hasMore}>
+          <div class="show-more">
+            <lightning-button
+              label="Show more"
+              icon-name="utility:chevrondown"
+              data-tab={activeTab}
+              onclick={handleShowMore}
+            ></lightning-button>
+          </div>
+        </template>
+      </template>
 
-            <!-- ======================================================= -->
-            <!-- APPS / APEX CLASSES / FLOWS                              -->
-            <!-- ======================================================= -->
-            <template lwc:if={isEntityTab}>
-                <lightning-layout multiple-rows vertical-align="end" class="filter-bar">
-                    <lightning-layout-item size="12" medium-device-size="5" padding="horizontal-small">
-                        <lightning-input type="search" label="Search" placeholder="Name or API name" value={entityFilters.search} data-tab={activeTab} data-filter="search" onchange={handleFilterChange}></lightning-input>
-                    </lightning-layout-item>
-                    <lightning-layout-item size="6" medium-device-size="3" padding="horizontal-small">
-                        <lightning-combobox label="Type" value={entityFilters.type} options={entityTypeOptions} data-tab={activeTab} data-filter="type" onchange={handleFilterChange}></lightning-combobox>
-                    </lightning-layout-item>
-                    <lightning-layout-item size="6" medium-device-size="3" padding="horizontal-small">
-                        <lightning-combobox label="Access" value={entityFilters.access} options={accessOptions} data-tab={activeTab} data-filter="access" onchange={handleFilterChange}></lightning-combobox>
-                    </lightning-layout-item>
-                </lightning-layout>
+      <!-- ======================================================= -->
+      <!-- APPS / APEX CLASSES / FLOWS                              -->
+      <!-- ======================================================= -->
+      <template lwc:if={isEntityTab}>
+        <lightning-layout multiple-rows vertical-align="end" class="filter-bar">
+          <lightning-layout-item
+            size="12"
+            medium-device-size="5"
+            padding="horizontal-small"
+          >
+            <lightning-input
+              type="search"
+              label="Search"
+              placeholder="Name or API name"
+              value={entityFilters.search}
+              data-tab={activeTab}
+              data-filter="search"
+              onchange={handleFilterChange}
+            ></lightning-input>
+          </lightning-layout-item>
+          <lightning-layout-item
+            size="6"
+            medium-device-size="3"
+            padding="horizontal-small"
+          >
+            <lightning-combobox
+              label="Type"
+              value={entityFilters.type}
+              options={entityTypeOptions}
+              data-tab={activeTab}
+              data-filter="type"
+              onchange={handleFilterChange}
+            ></lightning-combobox>
+          </lightning-layout-item>
+          <lightning-layout-item
+            size="6"
+            medium-device-size="3"
+            padding="horizontal-small"
+          >
+            <lightning-combobox
+              label="Access"
+              value={entityFilters.access}
+              options={accessOptions}
+              data-tab={activeTab}
+              data-filter="access"
+              onchange={handleFilterChange}
+            ></lightning-combobox>
+          </lightning-layout-item>
+        </lightning-layout>
 
-                <div class="toolbar-row">
-                    <p class="result-count">{entityView.summary}</p>
-                    <lightning-button-group>
-                        <lightning-button label="Enable all shown" icon-name="utility:check" data-enabled="true" onclick={handleEntityBulk} disabled={entityView.isEmpty}></lightning-button>
-                        <lightning-button label="Disable all shown" icon-name="utility:close" data-enabled="false" onclick={handleEntityBulk} disabled={entityView.isEmpty}></lightning-button>
-                    </lightning-button-group>
-                </div>
-
-                <template lwc:if={isFlowsTab}>
-                    <div class="hint-line">
-                        <lightning-icon icon-name="utility:info_alt" size="xx-small"></lightning-icon>
-                        <span>Flow access applies only to flows set to restrict access to enabled profiles or permission sets.</span>
-                    </div>
-                </template>
-
-                <div class="table-scroll">
-                    <table class="slds-table slds-table_cell-buffer slds-table_bordered resp-table" aria-label="Access">
-                        <thead>
-                            <tr class="slds-line-height_reset">
-                                <th scope="col" class="col-toggle"><div class="slds-truncate">Access</div></th>
-                                <th scope="col"><div class="slds-truncate">Name</div></th>
-                                <th scope="col"><div class="slds-truncate">Type</div></th>
-                                <th scope="col"><div class="slds-truncate">Granted by</div></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template for:each={entityView.rows} for:item="row">
-                                <tr key={row.id} class={row.rowClass}>
-                                    <td data-label="Access" class="col-toggle">
-                                        <lightning-input type="toggle" variant="label-hidden" label={row.label}
-                                            message-toggle-active="On" message-toggle-inactive="Off"
-                                            checked={row.checked} disabled={row.disabled}
-                                            data-id={row.id} onchange={handleEntityCheck}></lightning-input>
-                                    </td>
-                                    <th scope="row" data-label="Name">
-                                        <div class="slds-truncate cell-title" title={row.label}>{row.label}</div>
-                                        <div class="slds-truncate cell-sub" title={row.description}>{row.apiName}</div>
-                                    </th>
-                                    <td data-label="Type"><div class="slds-truncate cell-sub">{row.typeLabel}</div></td>
-                                    <td data-label="Granted by"><div class="slds-truncate cell-sub sources-cell" title={row.sources}>{row.sourcesLabel}</div></td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                    <template lwc:if={entityView.isEmpty}>
-                        <div class="empty-state">
-                            <lightning-icon icon-name="utility:search" size="small" class="empty-state__icon"></lightning-icon>
-                            <p>Nothing matches these filters.</p>
-                        </div>
-                    </template>
-                </div>
-                <template lwc:if={entityView.hasMore}>
-                    <div class="show-more">
-                        <lightning-button label="Show more" icon-name="utility:chevrondown" data-tab={activeTab} onclick={handleShowMore}></lightning-button>
-                    </div>
-                </template>
-            </template>
-
-            <!-- ======================================================= -->
-            <!-- RECORD TYPES (view only)                                 -->
-            <!-- ======================================================= -->
-            <template lwc:if={isRecordTypesTab}>
-                <div class="scope-note">
-                    <lightning-icon icon-name="utility:lock" size="x-small" class="scope-note__icon"></lightning-icon>
-                    <div>
-                        <p>Record type visibility lives in profile and permission set metadata, which Apex can't change. Review record types here, then assign them in Setup.</p>
-                        <lightning-button class="slds-m-top_x-small" label={recordTypeSetupLabel} icon-name="utility:new_window" variant="base" onclick={handleOpenRecordTypeSetup}></lightning-button>
-                    </div>
-                </div>
-                <lightning-layout multiple-rows vertical-align="end" class="filter-bar">
-                    <lightning-layout-item size="12" medium-device-size="5" padding="horizontal-small">
-                        <lightning-input type="search" label="Search record types" value={recordTypeFilters.search} data-tab="recordTypes" data-filter="search" onchange={handleFilterChange}></lightning-input>
-                    </lightning-layout-item>
-                    <lightning-layout-item size="12" medium-device-size="4" padding="horizontal-small">
-                        <lightning-combobox label="Object" value={recordTypeFilters.type} options={recordTypeObjectOptions} data-tab="recordTypes" data-filter="type" onchange={handleFilterChange}></lightning-combobox>
-                    </lightning-layout-item>
-                </lightning-layout>
-                <div class="table-scroll">
-                    <table class="slds-table slds-table_cell-buffer slds-table_bordered resp-table" aria-label="Record types">
-                        <thead>
-                            <tr class="slds-line-height_reset">
-                                <th scope="col"><div class="slds-truncate">Record type</div></th>
-                                <th scope="col"><div class="slds-truncate">Object</div></th>
-                                <th scope="col"><div class="slds-truncate">Status</div></th>
-                                <th scope="col"><div class="slds-truncate">Description</div></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template for:each={recordTypeRows} for:item="rt">
-                                <tr key={rt.id}>
-                                    <th scope="row" data-label="Record type">
-                                        <div class="slds-truncate cell-title">{rt.name}</div>
-                                        <div class="slds-truncate cell-sub">{rt.developerName}</div>
-                                    </th>
-                                    <td data-label="Object">{rt.sobjectType}</td>
-                                    <td data-label="Status"><span class={rt.badgeClass}>{rt.statusLabel}</span></td>
-                                    <td data-label="Description"><div class="slds-truncate" title={rt.description}>{rt.description}</div></td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                    <template lwc:if={recordTypesEmpty}>
-                        <div class="empty-state">
-                            <lightning-icon icon-name="utility:search" size="small" class="empty-state__icon"></lightning-icon>
-                            <p>No record types found.</p>
-                        </div>
-                    </template>
-                </div>
-            </template>
-
-            <!-- ======================================================= -->
-            <!-- PROFILE: USERS                                           -->
-            <!-- ======================================================= -->
-            <template lwc:if={isUsersTab}>
-                <div class="table-scroll">
-                    <table class="slds-table slds-table_cell-buffer slds-table_bordered resp-table" aria-label="Users with this profile">
-                        <thead>
-                            <tr class="slds-line-height_reset">
-                                <th scope="col"><div class="slds-truncate">Name</div></th>
-                                <th scope="col"><div class="slds-truncate">Email</div></th>
-                                <th scope="col"><div class="slds-truncate">Role</div></th>
-                                <th scope="col"><div class="slds-truncate">Status</div></th>
-                                <th scope="col" class="slds-text-align_right"><div class="slds-truncate">Actions</div></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template for:each={profileUsers} for:item="u">
-                                <tr key={u.userId}>
-                                    <th scope="row" data-label="Name">
-                                        <div class="slds-truncate cell-title">{u.name}</div>
-                                        <div class="slds-truncate cell-sub">{u.username}</div>
-                                    </th>
-                                    <td data-label="Email"><div class="slds-truncate">{u.email}</div></td>
-                                    <td data-label="Role"><div class="slds-truncate">{u.roleName}</div></td>
-                                    <td data-label="Status"><span class={u.badgeClass}>{u.statusBadge}</span></td>
-                                    <td data-label="Actions" class="slds-text-align_right">
-                                        <lightning-button label="Manage access" icon-name="utility:edit" data-id={u.userId} onclick={handleOpenUser}></lightning-button>
-                                    </td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                    <template lwc:if={profileUsersEmpty}>
-                        <div class="empty-state">
-                            <lightning-icon icon-name="utility:user" size="small" class="empty-state__icon"></lightning-icon>
-                            <p>No users have this profile.</p>
-                        </div>
-                    </template>
-                </div>
-            </template>
-
-            <!-- ======================================================= -->
-            <!-- PROFILE: SYSTEM PRIVILEGES (view only)                   -->
-            <!-- ======================================================= -->
-            <template lwc:if={isSystemTab}>
-                <div class="table-scroll">
-                    <table class="slds-table slds-table_cell-buffer slds-table_bordered resp-table" aria-label="Key system privileges">
-                        <thead>
-                            <tr class="slds-line-height_reset">
-                                <th scope="col"><div class="slds-truncate">Permission</div></th>
-                                <th scope="col"><div class="slds-truncate">Category</div></th>
-                                <th scope="col"><div class="slds-truncate">Description</div></th>
-                                <th scope="col"><div class="slds-truncate">Status</div></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template for:each={systemPermissions} for:item="sp">
-                                <tr key={sp.name}>
-                                    <th scope="row" data-label="Permission"><div class="slds-truncate cell-title">{sp.label}</div></th>
-                                    <td data-label="Category">{sp.category}</td>
-                                    <td data-label="Description"><div class="slds-truncate" title={sp.description}>{sp.description}</div></td>
-                                    <td data-label="Status"><span class={sp.badgeClass}>{sp.statusLabel}</span></td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                </div>
-            </template>
-
-            <!-- ======================================================= -->
-            <!-- PERMISSION SET: ASSIGNED USERS                           -->
-            <!-- ======================================================= -->
-            <template lwc:if={isPsUsersTab}>
-                <lightning-layout multiple-rows vertical-align="end" class="filter-bar">
-                    <lightning-layout-item size="12" medium-device-size="6" padding="horizontal-small">
-                        <lightning-input type="search" label="Search users" placeholder="Name, username or email" value={psUsersFilters.search} data-tab="psUsers" data-filter="search" onchange={handleFilterChange}></lightning-input>
-                    </lightning-layout-item>
-                    <lightning-layout-item size="12" medium-device-size="3" padding="horizontal-small">
-                        <lightning-combobox label="Assignment" value={psUsersFilters.access} options={assignedOptions} data-tab="psUsers" data-filter="access" onchange={handleFilterChange}></lightning-combobox>
-                    </lightning-layout-item>
-                </lightning-layout>
-                <p class="result-count">{psUsersView.summary}</p>
-
-                <div class="table-scroll">
-                    <table class="slds-table slds-table_cell-buffer slds-table_bordered resp-table" aria-label="Assigned users">
-                        <thead>
-                            <tr class="slds-line-height_reset">
-                                <th scope="col"><div class="slds-truncate">Name</div></th>
-                                <th scope="col"><div class="slds-truncate">Profile</div></th>
-                                <th scope="col"><div class="slds-truncate">Status</div></th>
-                                <th scope="col"><div class="slds-truncate">Assignment</div></th>
-                                <th scope="col" class="slds-text-align_right"><div class="slds-truncate">Actions</div></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template for:each={psUsersView.rows} for:item="row">
-                                <tr key={row.id}>
-                                    <th scope="row" data-label="Name">
-                                        <div class="slds-truncate cell-title" title={row.name}>{row.name}</div>
-                                        <div class="slds-truncate cell-sub" title={row.email}>{row.username}</div>
-                                    </th>
-                                    <td data-label="Profile"><div class="slds-truncate cell-sub">{row.profileName}</div></td>
-                                    <td data-label="Status"><span class={row.badgeClass}>{row.statusLabel}</span></td>
-                                    <td data-label="Assignment"><span class={row.badgeClass}>{row.assignedLabel}</span></td>
-                                    <td data-label="Actions" class="slds-text-align_right">
-                                        <div class="row-actions">
-                                            <template lwc:if={row.showAssign}>
-                                                <lightning-button label="Assign" icon-name="utility:add" variant="brand-outline"
-                                                    data-id={row.id} data-name={row.name} data-assign="true" onclick={handlePsUserAssignment}></lightning-button>
-                                            </template>
-                                            <template lwc:if={row.showRemove}>
-                                                <lightning-button label="Remove" icon-name="utility:dash" variant="destructive-text"
-                                                    data-id={row.id} data-name={row.name} data-assign="false" onclick={handlePsUserAssignment}></lightning-button>
-                                            </template>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                    <template lwc:if={psUsersView.isEmpty}>
-                        <div class="empty-state">
-                            <lightning-icon icon-name="utility:user" size="small" class="empty-state__icon"></lightning-icon>
-                            <p>No users match these filters.</p>
-                        </div>
-                    </template>
-                </div>
-                <template lwc:if={psUsersView.hasMore}>
-                    <div class="show-more">
-                        <lightning-button label="Show more" icon-name="utility:chevrondown" data-tab="psUsers" onclick={handleShowMore}></lightning-button>
-                    </div>
-                </template>
-            </template>
+        <div class="toolbar-row">
+          <p class="result-count">{entityView.summary}</p>
+          <lightning-button-group>
+            <lightning-button
+              label="Enable all shown"
+              icon-name="utility:check"
+              data-enabled="true"
+              onclick={handleEntityBulk}
+              disabled={entityView.isEmpty}
+            ></lightning-button>
+            <lightning-button
+              label="Disable all shown"
+              icon-name="utility:close"
+              data-enabled="false"
+              onclick={handleEntityBulk}
+              disabled={entityView.isEmpty}
+            ></lightning-button>
+          </lightning-button-group>
         </div>
 
-        <!-- UNSAVED CHANGES -->
-        <template lwc:if={hasPendingChanges}>
-            <div class="save-bar">
-                <div class="save-bar__info">
-                    <lightning-icon icon-name="utility:save" size="x-small"></lightning-icon>
-                    <span>{pendingSummary}</span>
-                </div>
-                <div class="save-bar__actions">
-                    <lightning-button label="Cancel" onclick={handleCancelChanges} disabled={isSaving}></lightning-button>
-                    <lightning-button label="Save changes" variant="brand" class="slds-m-left_x-small" onclick={handleSaveChanges} disabled={isSaving}></lightning-button>
-                </div>
-            </div>
+        <template lwc:if={isFlowsTab}>
+          <div class="hint-line">
+            <lightning-icon
+              icon-name="utility:info_alt"
+              size="xx-small"
+            ></lightning-icon>
+            <span
+              >Flow access applies only to flows set to restrict access to
+              enabled profiles or permission sets.</span
+            >
+          </div>
         </template>
+
+        <div class="table-scroll">
+          <table
+            class="slds-table slds-table_cell-buffer slds-table_bordered resp-table"
+            aria-label="Access"
+          >
+            <thead>
+              <tr class="slds-line-height_reset">
+                <th scope="col" class="col-toggle">
+                  <div class="slds-truncate">Access</div>
+                </th>
+                <th scope="col"><div class="slds-truncate">Name</div></th>
+                <th scope="col"><div class="slds-truncate">Type</div></th>
+                <th scope="col"><div class="slds-truncate">Granted by</div></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template for:each={entityView.rows} for:item="row">
+                <tr key={row.id} class={row.rowClass}>
+                  <td data-label="Access" class="col-toggle">
+                    <lightning-input
+                      type="toggle"
+                      variant="label-hidden"
+                      label={row.label}
+                      message-toggle-active="On"
+                      message-toggle-inactive="Off"
+                      checked={row.checked}
+                      disabled={row.disabled}
+                      data-id={row.id}
+                      onchange={handleEntityCheck}
+                    ></lightning-input>
+                  </td>
+                  <th scope="row" data-label="Name">
+                    <div class="slds-truncate cell-title" title={row.label}>
+                      {row.label}
+                    </div>
+                    <div class="slds-truncate cell-sub" title={row.description}>
+                      {row.apiName}
+                    </div>
+                  </th>
+                  <td data-label="Type">
+                    <div class="slds-truncate cell-sub">{row.typeLabel}</div>
+                  </td>
+                  <td data-label="Granted by">
+                    <div
+                      class="slds-truncate cell-sub sources-cell"
+                      title={row.sources}
+                    >
+                      {row.sourcesLabel}
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <template lwc:if={entityView.isEmpty}>
+            <div class="empty-state">
+              <lightning-icon
+                icon-name="utility:search"
+                size="small"
+                class="empty-state__icon"
+              ></lightning-icon>
+              <p>Nothing matches these filters.</p>
+            </div>
+          </template>
+        </div>
+        <template lwc:if={entityView.hasMore}>
+          <div class="show-more">
+            <lightning-button
+              label="Show more"
+              icon-name="utility:chevrondown"
+              data-tab={activeTab}
+              onclick={handleShowMore}
+            ></lightning-button>
+          </div>
+        </template>
+      </template>
+
+      <!-- ======================================================= -->
+      <!-- RECORD TYPES (view only)                                 -->
+      <!-- ======================================================= -->
+      <template lwc:if={isRecordTypesTab}>
+        <div class="scope-note">
+          <lightning-icon
+            icon-name="utility:lock"
+            size="x-small"
+            class="scope-note__icon"
+          ></lightning-icon>
+          <div>
+            <p>
+              Record type visibility lives in profile and permission set
+              metadata, which Apex can't change. Review record types here, then
+              assign them in Setup.
+            </p>
+            <lightning-button
+              class="slds-m-top_x-small"
+              label={recordTypeSetupLabel}
+              icon-name="utility:new_window"
+              variant="base"
+              onclick={handleOpenRecordTypeSetup}
+            ></lightning-button>
+          </div>
+        </div>
+        <lightning-layout multiple-rows vertical-align="end" class="filter-bar">
+          <lightning-layout-item
+            size="12"
+            medium-device-size="5"
+            padding="horizontal-small"
+          >
+            <lightning-input
+              type="search"
+              label="Search record types"
+              value={recordTypeFilters.search}
+              data-tab="recordTypes"
+              data-filter="search"
+              onchange={handleFilterChange}
+            ></lightning-input>
+          </lightning-layout-item>
+          <lightning-layout-item
+            size="12"
+            medium-device-size="4"
+            padding="horizontal-small"
+          >
+            <lightning-combobox
+              label="Object"
+              value={recordTypeFilters.type}
+              options={recordTypeObjectOptions}
+              data-tab="recordTypes"
+              data-filter="type"
+              onchange={handleFilterChange}
+            ></lightning-combobox>
+          </lightning-layout-item>
+        </lightning-layout>
+        <div class="table-scroll">
+          <table
+            class="slds-table slds-table_cell-buffer slds-table_bordered resp-table"
+            aria-label="Record types"
+          >
+            <thead>
+              <tr class="slds-line-height_reset">
+                <th scope="col">
+                  <div class="slds-truncate">Record type</div>
+                </th>
+                <th scope="col"><div class="slds-truncate">Object</div></th>
+                <th scope="col"><div class="slds-truncate">Status</div></th>
+                <th scope="col">
+                  <div class="slds-truncate">Description</div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <template for:each={recordTypeRows} for:item="rt">
+                <tr key={rt.id}>
+                  <th scope="row" data-label="Record type">
+                    <div class="slds-truncate cell-title">{rt.name}</div>
+                    <div class="slds-truncate cell-sub">{rt.developerName}</div>
+                  </th>
+                  <td data-label="Object">{rt.sobjectType}</td>
+                  <td data-label="Status">
+                    <span class={rt.badgeClass}>{rt.statusLabel}</span>
+                  </td>
+                  <td data-label="Description">
+                    <div class="slds-truncate" title={rt.description}>
+                      {rt.description}
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <template lwc:if={recordTypesEmpty}>
+            <div class="empty-state">
+              <lightning-icon
+                icon-name="utility:search"
+                size="small"
+                class="empty-state__icon"
+              ></lightning-icon>
+              <p>No record types found.</p>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- ======================================================= -->
+      <!-- PROFILE: USERS                                           -->
+      <!-- ======================================================= -->
+      <template lwc:if={isUsersTab}>
+        <div class="table-scroll">
+          <table
+            class="slds-table slds-table_cell-buffer slds-table_bordered resp-table"
+            aria-label="Users with this profile"
+          >
+            <thead>
+              <tr class="slds-line-height_reset">
+                <th scope="col"><div class="slds-truncate">Name</div></th>
+                <th scope="col"><div class="slds-truncate">Email</div></th>
+                <th scope="col"><div class="slds-truncate">Role</div></th>
+                <th scope="col"><div class="slds-truncate">Status</div></th>
+                <th scope="col" class="slds-text-align_right">
+                  <div class="slds-truncate">Actions</div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <template for:each={profileUsers} for:item="u">
+                <tr key={u.userId}>
+                  <th scope="row" data-label="Name">
+                    <div class="slds-truncate cell-title">{u.name}</div>
+                    <div class="slds-truncate cell-sub">{u.username}</div>
+                  </th>
+                  <td data-label="Email">
+                    <div class="slds-truncate">{u.email}</div>
+                  </td>
+                  <td data-label="Role">
+                    <div class="slds-truncate">{u.roleName}</div>
+                  </td>
+                  <td data-label="Status">
+                    <span class={u.badgeClass}>{u.statusBadge}</span>
+                  </td>
+                  <td data-label="Actions" class="slds-text-align_right">
+                    <lightning-button
+                      label="Manage access"
+                      icon-name="utility:edit"
+                      data-id={u.userId}
+                      onclick={handleOpenUser}
+                    ></lightning-button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <template lwc:if={profileUsersEmpty}>
+            <div class="empty-state">
+              <lightning-icon
+                icon-name="utility:user"
+                size="small"
+                class="empty-state__icon"
+              ></lightning-icon>
+              <p>No users have this profile.</p>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- ======================================================= -->
+      <!-- PROFILE: SYSTEM PRIVILEGES (view only)                   -->
+      <!-- ======================================================= -->
+      <template lwc:if={isSystemTab}>
+        <div class="table-scroll">
+          <table
+            class="slds-table slds-table_cell-buffer slds-table_bordered resp-table"
+            aria-label="Key system privileges"
+          >
+            <thead>
+              <tr class="slds-line-height_reset">
+                <th scope="col"><div class="slds-truncate">Permission</div></th>
+                <th scope="col"><div class="slds-truncate">Category</div></th>
+                <th scope="col">
+                  <div class="slds-truncate">Description</div>
+                </th>
+                <th scope="col"><div class="slds-truncate">Status</div></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template for:each={systemPermissions} for:item="sp">
+                <tr key={sp.name}>
+                  <th scope="row" data-label="Permission">
+                    <div class="slds-truncate cell-title">{sp.label}</div>
+                  </th>
+                  <td data-label="Category">{sp.category}</td>
+                  <td data-label="Description">
+                    <div class="slds-truncate" title={sp.description}>
+                      {sp.description}
+                    </div>
+                  </td>
+                  <td data-label="Status">
+                    <span class={sp.badgeClass}>{sp.statusLabel}</span>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+
+      <!-- ======================================================= -->
+      <!-- PERMISSION SET: ASSIGNED USERS                           -->
+      <!-- ======================================================= -->
+      <template lwc:if={isPsUsersTab}>
+        <lightning-layout multiple-rows vertical-align="end" class="filter-bar">
+          <lightning-layout-item
+            size="12"
+            medium-device-size="6"
+            padding="horizontal-small"
+          >
+            <lightning-input
+              type="search"
+              label="Search users"
+              placeholder="Name, username or email"
+              value={psUsersFilters.search}
+              data-tab="psUsers"
+              data-filter="search"
+              onchange={handleFilterChange}
+            ></lightning-input>
+          </lightning-layout-item>
+          <lightning-layout-item
+            size="12"
+            medium-device-size="3"
+            padding="horizontal-small"
+          >
+            <lightning-combobox
+              label="Assignment"
+              value={psUsersFilters.access}
+              options={assignedOptions}
+              data-tab="psUsers"
+              data-filter="access"
+              onchange={handleFilterChange}
+            ></lightning-combobox>
+          </lightning-layout-item>
+        </lightning-layout>
+        <p class="result-count">{psUsersView.summary}</p>
+
+        <div class="table-scroll">
+          <table
+            class="slds-table slds-table_cell-buffer slds-table_bordered resp-table"
+            aria-label="Assigned users"
+          >
+            <thead>
+              <tr class="slds-line-height_reset">
+                <th scope="col"><div class="slds-truncate">Name</div></th>
+                <th scope="col"><div class="slds-truncate">Profile</div></th>
+                <th scope="col"><div class="slds-truncate">Status</div></th>
+                <th scope="col"><div class="slds-truncate">Assignment</div></th>
+                <th scope="col" class="slds-text-align_right">
+                  <div class="slds-truncate">Actions</div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <template for:each={psUsersView.rows} for:item="row">
+                <tr key={row.id}>
+                  <th scope="row" data-label="Name">
+                    <div class="slds-truncate cell-title" title={row.name}>
+                      {row.name}
+                    </div>
+                    <div class="slds-truncate cell-sub" title={row.email}>
+                      {row.username}
+                    </div>
+                  </th>
+                  <td data-label="Profile">
+                    <div class="slds-truncate cell-sub">{row.profileName}</div>
+                  </td>
+                  <td data-label="Status">
+                    <span class={row.badgeClass}>{row.statusLabel}</span>
+                  </td>
+                  <td data-label="Assignment">
+                    <span class={row.badgeClass}>{row.assignedLabel}</span>
+                  </td>
+                  <td data-label="Actions" class="slds-text-align_right">
+                    <div class="row-actions">
+                      <template lwc:if={row.showAssign}>
+                        <lightning-button
+                          label="Assign"
+                          icon-name="utility:add"
+                          variant="brand-outline"
+                          data-id={row.id}
+                          data-name={row.name}
+                          data-assign="true"
+                          onclick={handlePsUserAssignment}
+                        ></lightning-button>
+                      </template>
+                      <template lwc:if={row.showRemove}>
+                        <lightning-button
+                          label="Remove"
+                          icon-name="utility:dash"
+                          variant="destructive-text"
+                          data-id={row.id}
+                          data-name={row.name}
+                          data-assign="false"
+                          onclick={handlePsUserAssignment}
+                        ></lightning-button>
+                      </template>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <template lwc:if={psUsersView.isEmpty}>
+            <div class="empty-state">
+              <lightning-icon
+                icon-name="utility:user"
+                size="small"
+                class="empty-state__icon"
+              ></lightning-icon>
+              <p>No users match these filters.</p>
+            </div>
+          </template>
+        </div>
+        <template lwc:if={psUsersView.hasMore}>
+          <div class="show-more">
+            <lightning-button
+              label="Show more"
+              icon-name="utility:chevrondown"
+              data-tab="psUsers"
+              onclick={handleShowMore}
+            ></lightning-button>
+          </div>
+        </template>
+      </template>
     </div>
+
+    <!-- UNSAVED CHANGES -->
+    <template lwc:if={hasPendingChanges}>
+      <div class="save-bar">
+        <div class="save-bar__info">
+          <lightning-icon
+            icon-name="utility:save"
+            size="x-small"
+          ></lightning-icon>
+          <span>{pendingSummary}</span>
+        </div>
+        <div class="save-bar__actions">
+          <lightning-button
+            label="Cancel"
+            onclick={handleCancelChanges}
+            disabled={isSaving}
+          ></lightning-button>
+          <lightning-button
+            label="Save changes"
+            variant="brand"
+            class="slds-m-left_x-small"
+            onclick={handleSaveChanges}
+            disabled={isSaving}
+          ></lightning-button>
+        </div>
+      </div>
+    </template>
+  </div>
 </template>
