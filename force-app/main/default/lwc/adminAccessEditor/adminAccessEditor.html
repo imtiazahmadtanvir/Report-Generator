@@ -7,28 +7,6 @@
       ></lightning-spinner>
     </template>
 
-    <!-- WHERE CHANGES ARE SAVED -->
-    <template lwc:if={context}>
-      <div class="scope-note">
-        <lightning-icon
-          icon-name="utility:info"
-          size="x-small"
-          class="scope-note__icon"
-        ></lightning-icon>
-        <p>{saveTargetText}</p>
-      </div>
-      <template lwc:if={context.readOnlyReason}>
-        <div class="scope-note scope-note_warning">
-          <lightning-icon
-            icon-name="utility:warning"
-            size="x-small"
-            class="scope-note__icon"
-          ></lightning-icon>
-          <p>{context.readOnlyReason}</p>
-        </div>
-      </template>
-    </template>
-
     <!-- CATEGORY NAVIGATION (icon pills) -->
     <nav class="cat-nav" role="tablist" aria-label="Access categories">
       <template for:each={navTabs} for:item="tab">
@@ -578,14 +556,14 @@
               icon-name="utility:check"
               data-enabled="true"
               onclick={handleEntityBulk}
-              disabled={entityView.isEmpty}
+              disabled={isEntityBulkDisabled}
             ></lightning-button>
             <lightning-button
               label="Disable all shown"
               icon-name="utility:close"
               data-enabled="false"
               onclick={handleEntityBulk}
-              disabled={entityView.isEmpty}
+              disabled={isEntityBulkDisabled}
             ></lightning-button>
           </lightning-button-group>
         </div>

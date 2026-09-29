@@ -258,7 +258,7 @@ public with sharing class AdminAccessEditorService {
     ctx.editPermSetLabel = t.editPermSetLabel;
     ctx.editPermSetExists = t.editPermSetId != null;
     ctx.canEditObjectAccess = t.canEditObjectAccess();
-    ctx.canEditSetupAccess = true;
+    ctx.canEditSetupAccess = t.targetType == TYPE_USER || t.isCustomProfile;
 
     if (t.targetType == TYPE_PROFILE) {
       ctx.setupUrl =

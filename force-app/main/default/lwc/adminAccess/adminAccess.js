@@ -106,6 +106,12 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
   // SECTION 4: PROFILES STATE
   @track profileSearchTerm = "";
+  @track profileTypeFilter = "All";
+  @track profileTypeOptions = [
+    { label: "All Profiles", value: "All" },
+    { label: "Custom Profiles", value: "Custom" },
+    { label: "Standard Profiles", value: "Standard" }
+  ];
   @track profilesList = [];
   @track selectedProfile = null;
 
@@ -305,10 +311,22 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
       searchTerm: this.profileSearchTerm,
       licenseFilter: "All"
     });
-    this.profilesList = profs || [];
+    const mapped = (profs || []).map((p) => ({
+      ...p,
+      typeLabel: p.isCustom ? "Custom" : "Standard",
+      typeClass: p.isCustom ? "badge-custom" : "badge-standard"
+    }));
+
+    if (this.profileTypeFilter === "Custom") {
+      this.profilesList = mapped.filter((p) => p.isCustom);
+    } else if (this.profileTypeFilter === "Standard") {
+      this.profilesList = mapped.filter((p) => !p.isCustom);
+    } else {
+      this.profilesList = mapped;
+    }
 
     const options = [{ label: "All Profiles", value: "" }];
-    for (const p of this.profilesList) {
+    for (const p of mapped) {
       options.push({ label: p.name, value: p.id });
     }
     this.profileOptions = options;
@@ -843,6 +861,11 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
   // =========================================================================
   handleProfileSearch(event) {
     this.profileSearchTerm = event.target.value;
+    this.loadProfiles();
+  }
+
+  handleProfileTypeFilterChange(event) {
+    this.profileTypeFilter = event.detail.value;
     this.loadProfiles();
   }
 

@@ -198,6 +198,8 @@ public with sharing class AdminSecurityDataModel {
     public String permissionSetId { get; set; }
     @AuraEnabled
     public String createdDateFormatted { get; set; }
+    @AuraEnabled
+    public Boolean isCustom { get; set; }
 
     public Integer compareTo(Object compareTo) {
       ProfileSummary other = (ProfileSummary) compareTo;

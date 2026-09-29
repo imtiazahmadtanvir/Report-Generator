@@ -281,6 +281,15 @@
                         onchange={handleProfileSearch}
                       ></lightning-input>
                     </div>
+                    <div class="filter-combo-box">
+                      <lightning-combobox
+                        label="Profile Type Filter"
+                        variant="label-hidden"
+                        value={profileTypeFilter}
+                        options={profileTypeOptions}
+                        onchange={handleProfileTypeFilterChange}
+                      ></lightning-combobox>
+                    </div>
                   </div>
                   <div class="toolbar-actions">
                     <span class="slds-text-body_small slds-text-color_weak">
@@ -294,6 +303,7 @@
                     <thead>
                       <tr>
                         <th>Profile Name</th>
+                        <th>Type</th>
                         <th>User License</th>
                         <th>User Type</th>
                         <th class="slds-text-align_center">Associated Users</th>
@@ -311,6 +321,9 @@
                             >
                               {p.name}
                             </button>
+                          </td>
+                          <td data-label="Type">
+                            <span class={p.typeClass}>{p.typeLabel}</span>
                           </td>
                           <td data-label="User License">{p.userLicenseName}</td>
                           <td data-label="User Type">{p.userType}</td>

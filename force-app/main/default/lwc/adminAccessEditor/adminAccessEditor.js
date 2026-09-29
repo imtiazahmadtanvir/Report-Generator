@@ -817,14 +817,17 @@ export default class AdminAccessEditor extends NavigationMixin(
     const matches = this.filteredEntities();
     const pending = this.entityChanges[entityType];
 
+    const canEditSetup = this.canEditSetup;
     const rows = matches.slice(0, this.entityFilters.limit).map((item) => ({
       ...item,
       checkId: `ent-${item.id}`,
       checked: this.ownEntityEnabled(item) || item.isInherited,
-      disabled: item.isInherited,
+      disabled: !canEditSetup || item.isInherited,
       title: item.isInherited
         ? `Granted by: ${item.sources}`
-        : `Access to ${item.label}`,
+        : !canEditSetup
+          ? "Read-only for standard profiles"
+          : `Access to ${item.label}`,
       sourcesLabel: item.sources || "—",
       rowClass: pending[item.id] !== undefined ? "row-dirty" : ""
     }));
@@ -1228,6 +1231,16 @@ export default class AdminAccessEditor extends NavigationMixin(
 
   get canEditObjects() {
     return Boolean(this.context && this.context.canEditObjectAccess);
+  }
+
+  get canEditSetup() {
+    return Boolean(this.context && this.context.canEditSetupAccess);
+  }
+
+  get isEntityBulkDisabled() {
+    return (
+      !this.canEditSetup || Boolean(this.entityView && this.entityView.isEmpty)
+    );
   }
 
   get saveTargetText() {

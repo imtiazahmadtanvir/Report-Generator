@@ -1193,14 +1193,16 @@ public with sharing class AdminSecurityService {
 
     // Find matching profile-owned PermissionSets
     Map<Id, Id> profToPsMap = new Map<Id, Id>();
+    Map<Id, Boolean> profCustomMap = new Map<Id, Boolean>();
     if (!profIds.isEmpty()) {
       List<PermissionSet> permSets = [
-        SELECT Id, ProfileId
+        SELECT Id, ProfileId, IsCustom
         FROM PermissionSet
         WHERE IsOwnedByProfile = TRUE AND ProfileId IN :profIds
       ];
       for (PermissionSet ps : permSets) {
         profToPsMap.put(ps.ProfileId, ps.Id);
+        profCustomMap.put(ps.ProfileId, ps.IsCustom);
       }
     }
 
@@ -1219,6 +1221,9 @@ public with sharing class AdminSecurityService {
       dto.createdDateFormatted = p.CreatedDate != null
         ? p.CreatedDate.format('yyyy-MM-dd')
         : '-';
+      dto.isCustom = profCustomMap.containsKey(p.Id)
+        ? profCustomMap.get(p.Id)
+        : false;
       results.add(dto);
     }
 
@@ -1295,7 +1300,7 @@ public with sharing class AdminSecurityService {
 
     // Profile-owned PermissionSet Id
     List<PermissionSet> permSets = [
-      SELECT Id
+      SELECT Id, IsCustom
       FROM PermissionSet
       WHERE IsOwnedByProfile = TRUE AND ProfileId = :profileId
       LIMIT 1
@@ -1305,6 +1310,7 @@ public with sharing class AdminSecurityService {
     if (!permSets.isEmpty()) {
       Id permSetId = permSets[0].Id;
       summary.permissionSetId = permSetId;
+      summary.isCustom = permSets[0].IsCustom;
 
       List<ObjectPermissions> opList = [
         SELECT
