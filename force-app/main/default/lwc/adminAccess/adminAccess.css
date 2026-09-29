@@ -203,12 +203,10 @@
 
 .admin-sidebar {
     position: sticky;
-    /* Pin just below the sticky console header */
+    /* Pin just below the sticky console header; sized to its content (no inner scrollbar) */
     top: 100px;
     align-self: start;
     padding-right: 1rem;
-    max-height: calc(100vh - 116px);
-    overflow-y: auto;
 }
 
 .admin-main {
