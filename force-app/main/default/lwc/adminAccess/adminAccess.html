@@ -6,57 +6,37 @@
         </template>
 
         <!-- ============================================================== -->
-        <!-- EXECUTIVE ADMIN CONSOLE HEADER                                 -->
+        <!-- CONSOLE HEADER (title • stats • actions)                       -->
         <!-- ============================================================== -->
-        <div class="slds-page-header slds-page-header_record-home console-header">
-            <div class="slds-page-header__row">
-                <div class="slds-page-header__col-title">
-                    <div class="slds-media">
-                        <div class="slds-media__figure">
-                            <lightning-icon icon-name="standard:portal" size="medium" alternative-text="Admin Access"></lightning-icon>
-                        </div>
-                        <div class="slds-media__body">
-                            <div class="slds-page-header__name">
-                                <div class="slds-page-header__name-title">
-                                    <h1>
-                                        <span>Security Console</span>
-                                        <span class="slds-page-header__title slds-truncate" title="Admin Access">Admin Access</span>
-                                    </h1>
-                                </div>
-                            </div>
-                            <p class="slds-page-header__name-meta">
-                                Signed in as {overview.currentAdminName} &bull; {overview.currentAdminProfile}
-                            </p>
-                        </div>
-                    </div>
+        <header class="console-header">
+            <div class="ch-title">
+                <div class="ch-icon">
+                    <lightning-icon icon-name="standard:portal" size="medium" alternative-text="Admin Access"></lightning-icon>
                 </div>
-                <div class="slds-page-header__col-actions">
-                    <div class="slds-page-header__controls">
-                        <div class="slds-page-header__control">
-                            <lightning-button-group>
-                                <lightning-button label="Refresh" icon-name="utility:refresh" onclick={refreshAll}></lightning-button>
-                                <lightning-button label="Setup" icon-name="utility:setup" onclick={handleOpenSetupHome}></lightning-button>
-                            </lightning-button-group>
-                        </div>
-                    </div>
+                <div class="ch-title-text">
+                    <p class="ch-eyebrow">Security Console</p>
+                    <h1 class="ch-title-main">Admin Access</h1>
+                    <p class="ch-meta">Signed in as {overview.currentAdminName} &bull; {overview.currentAdminProfile}</p>
                 </div>
             </div>
-            <div class="slds-page-header__row slds-page-header__row_gutters">
-                <div class="slds-page-header__col-details">
-                    <ul class="slds-page-header__detail-row console-stats">
-                        <template for:each={headerStats} for:item="stat">
-                            <li key={stat.tab} class="slds-page-header__detail-block">
-                                <button class="slds-button stat-button" data-tab={stat.tab} onclick={handleStatClick} title={stat.title}>
-                                    <span class="slds-text-title slds-truncate">{stat.label}</span>
-                                    <span class="stat-number">{stat.value}</span>
-                                    <span class="slds-text-body_small slds-text-color_weak">{stat.meta}</span>
-                                </button>
-                            </li>
-                        </template>
-                    </ul>
-                </div>
+
+            <div class="ch-stats">
+                <template for:each={headerStats} for:item="stat">
+                    <button key={stat.tab} class="ch-stat" data-tab={stat.tab} onclick={handleStatClick} title={stat.title}>
+                        <span class="ch-stat-label">{stat.label}</span>
+                        <span class="ch-stat-number">{stat.value}</span>
+                        <span class="ch-stat-meta">{stat.meta}</span>
+                    </button>
+                </template>
             </div>
-        </div>
+
+            <div class="ch-actions">
+                <lightning-button-group>
+                    <lightning-button label="Refresh" icon-name="utility:refresh" onclick={refreshAll}></lightning-button>
+                    <lightning-button label="Setup" icon-name="utility:setup" onclick={handleOpenSetupHome}></lightning-button>
+                </lightning-button-group>
+            </div>
+        </header>
 
         <!-- ============================================================== -->
         <!-- MAIN NAVIGATION TABSET                                         -->
@@ -224,36 +204,28 @@
                                         <th>Email</th>
                                         <th>Profile</th>
                                         <th>Role</th>
-                                        <th>Status</th>
-                                        <th>Perm Sets</th>
-                                        <th>Groups</th>
-                                        <th class="slds-text-align_right">Action</th>
+                                        <th class="slds-text-align_center">Status</th>
+                                        <th class="slds-text-align_center">Perm Sets</th>
+                                        <th class="slds-text-align_center">Groups</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <template for:each={usersList} for:item="u">
                                         <tr key={u.userId}>
-                                            <td data-label="Name"><strong>{u.name}</strong></td>
-                                            <td data-label="Username"><code>{u.username}</code></td>
-                                            <td data-label="Email">{u.email}</td>
+                                            <td data-label="Name">
+                                                <button class="link-name" data-id={u.userId} onclick={handleViewUserDetail} title="Manage access">{u.name}</button>
+                                            </td>
+                                            <td data-label="Username"><code class="cell-clip" title={u.username}>{u.username}</code></td>
+                                            <td data-label="Email"><span class="cell-clip" title={u.email}>{u.email}</span></td>
                                             <td data-label="Profile"><span class="slds-badge slds-theme_shade">{u.profileName}</span></td>
                                             <td data-label="Role">{u.roleName}</td>
-                                            <td data-label="Status">
+                                            <td data-label="Status" class="slds-text-align_center">
                                                 <span class={u.statusClass}>
                                                     {u.statusBadge}
                                                 </span>
                                             </td>
-                                            <td data-label="Perm Sets"><span class="badge-count">{u.permSetCount}</span></td>
-                                            <td data-label="Groups"><span class="badge-count">{u.permSetGroupCount}</span></td>
-                                            <td data-label="Action" class="slds-text-align_right">
-                                                <lightning-button
-                                                    label="Manage Access"
-                                                    icon-name="utility:edit"
-                                                    variant="brand"
-                                                    data-id={u.userId}
-                                                    onclick={handleViewUserDetail}
-                                                ></lightning-button>
-                                            </td>
+                                            <td data-label="Perm Sets" class="slds-text-align_center"><span class="badge-count">{u.permSetCount}</span></td>
+                                            <td data-label="Groups" class="slds-text-align_center"><span class="badge-count">{u.permSetGroupCount}</span></td>
                                         </tr>
                                     </template>
                                 </tbody>
@@ -323,7 +295,7 @@
                                 </div>
 
                                 <div class="styled-table-container">
-                                    <table class="custom-data-table">
+                                    <table class="custom-data-table resp-list">
                                         <thead>
                                             <tr>
                                                 <th>Name</th>
@@ -338,16 +310,16 @@
                                             <template lwc:if={hasPermSetAssignedUsers}>
                                                 <template for:each={selectedPermSet.assignedUsers} for:item="u">
                                                     <tr key={u.userId}>
-                                                        <td><strong>{u.name}</strong></td>
-                                                        <td><code>{u.username}</code></td>
-                                                        <td>{u.email}</td>
-                                                        <td>{u.profileName}</td>
-                                                        <td>
+                                                        <td data-label="Name"><strong>{u.name}</strong></td>
+                                                        <td data-label="Username"><code>{u.username}</code></td>
+                                                        <td data-label="Email">{u.email}</td>
+                                                        <td data-label="Profile">{u.profileName}</td>
+                                                        <td data-label="Status">
                                                             <span class={u.statusClass}>
                                                                 {u.statusBadge}
                                                             </span>
                                                         </td>
-                                                        <td class="slds-text-align_right">
+                                                        <td data-label="Action" class="slds-text-align_right">
                                                             <lightning-button-icon
                                                                 icon-name="utility:delete"
                                                                 alternative-text="Remove User Assignment"
@@ -375,7 +347,7 @@
                             <!-- SUB-TAB: OBJECT PERMISSIONS -->
                             <lightning-tab label="Object Permissions" value="objects" icon-name="standard:entity">
                                 <div class="styled-table-container">
-                                    <table class="custom-data-table">
+                                    <table class="custom-data-table resp-list">
                                         <thead>
                                             <tr>
                                                 <th>Object</th>
@@ -393,33 +365,33 @@
                                             <template lwc:if={hasPermSetObjectPerms}>
                                                 <template for:each={selectedPermSet.objectPermissions} for:item="op">
                                                     <tr key={op.sobjectType}>
-                                                        <td><strong>{op.sobjectLabel}</strong></td>
-                                                        <td><code>{op.sobjectType}</code></td>
-                                                        <td class="slds-text-align_center">
+                                                        <td data-label="Object"><strong>{op.sobjectLabel}</strong></td>
+                                                        <td data-label="API Name"><code>{op.sobjectType}</code></td>
+                                                        <td data-label="Read" class="slds-text-align_center">
                                                             <template lwc:if={op.permissionsRead}><span class="perm-check-true">✓</span></template>
                                                             <template lwc:else><span class="perm-check-false">—</span></template>
                                                         </td>
-                                                        <td class="slds-text-align_center">
+                                                        <td data-label="Create" class="slds-text-align_center">
                                                             <template lwc:if={op.permissionsCreate}><span class="perm-check-true">✓</span></template>
                                                             <template lwc:else><span class="perm-check-false">—</span></template>
                                                         </td>
-                                                        <td class="slds-text-align_center">
+                                                        <td data-label="Edit" class="slds-text-align_center">
                                                             <template lwc:if={op.permissionsEdit}><span class="perm-check-true">✓</span></template>
                                                             <template lwc:else><span class="perm-check-false">—</span></template>
                                                         </td>
-                                                        <td class="slds-text-align_center">
+                                                        <td data-label="Delete" class="slds-text-align_center">
                                                             <template lwc:if={op.permissionsDelete}><span class="perm-check-true">✓</span></template>
                                                             <template lwc:else><span class="perm-check-false">—</span></template>
                                                         </td>
-                                                        <td class="slds-text-align_center">
+                                                        <td data-label="View All" class="slds-text-align_center">
                                                             <template lwc:if={op.permissionsViewAllRecords}><span class="perm-check-true">✓</span></template>
                                                             <template lwc:else><span class="perm-check-false">—</span></template>
                                                         </td>
-                                                        <td class="slds-text-align_center">
+                                                        <td data-label="Modify All" class="slds-text-align_center">
                                                             <template lwc:if={op.permissionsModifyAllRecords}><span class="perm-check-true">✓</span></template>
                                                             <template lwc:else><span class="perm-check-false">—</span></template>
                                                         </td>
-                                                        <td class="slds-text-align_right">
+                                                        <td data-label="Action" class="slds-text-align_right">
                                                             <template lwc:if={op.isEditable}>
                                                                 <lightning-button
                                                                     label="Edit"
@@ -451,7 +423,7 @@
                             <!-- SUB-TAB: FIELD PERMISSIONS -->
                             <lightning-tab label="Field Permissions" value="fields" icon-name="standard:custom_notification">
                                 <div class="styled-table-container">
-                                    <table class="custom-data-table">
+                                    <table class="custom-data-table resp-list">
                                         <thead>
                                             <tr>
                                                 <th>Object</th>
@@ -465,17 +437,17 @@
                                             <template lwc:if={hasPermSetFieldPerms}>
                                                 <template for:each={selectedPermSet.fieldPermissions} for:item="fp">
                                                     <tr key={fp.field}>
-                                                        <td><strong>{fp.sobjectType}</strong></td>
-                                                        <td><code>{fp.field}</code></td>
-                                                        <td class="slds-text-align_center">
+                                                        <td data-label="Object"><strong>{fp.sobjectType}</strong></td>
+                                                        <td data-label="Field"><code>{fp.field}</code></td>
+                                                        <td data-label="Read Access" class="slds-text-align_center">
                                                             <template lwc:if={fp.permissionsRead}><span class="perm-check-true">✓</span></template>
                                                             <template lwc:else><span class="perm-check-false">—</span></template>
                                                         </td>
-                                                        <td class="slds-text-align_center">
+                                                        <td data-label="Edit Access" class="slds-text-align_center">
                                                             <template lwc:if={fp.permissionsEdit}><span class="perm-check-true">✓</span></template>
                                                             <template lwc:else><span class="perm-check-false">—</span></template>
                                                         </td>
-                                                        <td class="slds-text-align_right">
+                                                        <td data-label="Action" class="slds-text-align_right">
                                                             <template lwc:if={fp.isEditable}>
                                                                 <lightning-button
                                                                     label="Edit"
@@ -538,7 +510,7 @@
                         </div>
 
                         <div class="styled-table-container">
-                            <table class="custom-data-table">
+                            <table class="custom-data-table resp-list">
                                 <thead>
                                     <tr>
                                         <th>Label</th>
@@ -553,13 +525,13 @@
                                 <tbody>
                                     <template for:each={permSetsList} for:item="ps">
                                         <tr key={ps.id}>
-                                            <td><strong>{ps.label}</strong></td>
-                                            <td><code>{ps.name}</code></td>
-                                            <td><span class={ps.typeClass}>{ps.typeBadge}</span></td>
-                                            <td>{ps.licenseName}</td>
-                                            <td><span class="badge-count">{ps.userCount}</span></td>
-                                            <td>{ps.description}</td>
-                                            <td class="slds-text-align_right">
+                                            <td data-label="Label"><strong>{ps.label}</strong></td>
+                                            <td data-label="API Name"><code>{ps.name}</code></td>
+                                            <td data-label="Type"><span class={ps.typeClass}>{ps.typeBadge}</span></td>
+                                            <td data-label="License">{ps.licenseName}</td>
+                                            <td data-label="Assigned Users"><span class="badge-count">{ps.userCount}</span></td>
+                                            <td data-label="Description">{ps.description}</td>
+                                            <td data-label="Action" class="slds-text-align_right">
                                                 <lightning-button
                                                     label="View & Manage"
                                                     icon-name="utility:preview"
@@ -615,7 +587,7 @@
                         <lightning-tabset variant="scoped" active-tab-value={selectedGroupSubTab} onselect={handleGroupSubTabChange}>
                             <lightning-tab label="Included Permission Sets" value="permSets" icon-name="standard:user_role">
                                 <div class="styled-table-container">
-                                    <table class="custom-data-table">
+                                    <table class="custom-data-table resp-list">
                                         <thead>
                                             <tr>
                                                 <th>Permission Set Label</th>
@@ -628,11 +600,11 @@
                                         <tbody>
                                             <template for:each={selectedGroup.includedPermissionSets} for:item="ps">
                                                 <tr key={ps.id}>
-                                                    <td><strong>{ps.label}</strong></td>
-                                                    <td><code>{ps.name}</code></td>
-                                                    <td><span class={ps.typeClass}>{ps.typeBadge}</span></td>
-                                                    <td>{ps.licenseName}</td>
-                                                    <td>{ps.description}</td>
+                                                    <td data-label="Permission Set Label"><strong>{ps.label}</strong></td>
+                                                    <td data-label="API Name"><code>{ps.name}</code></td>
+                                                    <td data-label="Type"><span class={ps.typeClass}>{ps.typeBadge}</span></td>
+                                                    <td data-label="License">{ps.licenseName}</td>
+                                                    <td data-label="Description">{ps.description}</td>
                                                 </tr>
                                             </template>
                                         </tbody>
@@ -658,7 +630,7 @@
                                 </div>
 
                                 <div class="styled-table-container">
-                                    <table class="custom-data-table">
+                                    <table class="custom-data-table resp-list">
                                         <thead>
                                             <tr>
                                                 <th>Name</th>
@@ -673,12 +645,12 @@
                                             <template lwc:if={hasGroupAssignedUsers}>
                                                 <template for:each={selectedGroup.assignedUsers} for:item="u">
                                                     <tr key={u.userId}>
-                                                        <td><strong>{u.name}</strong></td>
-                                                        <td><code>{u.username}</code></td>
-                                                        <td>{u.email}</td>
-                                                        <td>{u.profileName}</td>
-                                                        <td><span class={u.statusClass}>{u.statusBadge}</span></td>
-                                                        <td class="slds-text-align_right">
+                                                        <td data-label="Name"><strong>{u.name}</strong></td>
+                                                        <td data-label="Username"><code>{u.username}</code></td>
+                                                        <td data-label="Email">{u.email}</td>
+                                                        <td data-label="Profile">{u.profileName}</td>
+                                                        <td data-label="Status"><span class={u.statusClass}>{u.statusBadge}</span></td>
+                                                        <td data-label="Action" class="slds-text-align_right">
                                                             <lightning-button-icon
                                                                 icon-name="utility:delete"
                                                                 alternative-text="Remove User"
@@ -737,7 +709,7 @@
                         </div>
 
                         <div class="styled-table-container">
-                            <table class="custom-data-table">
+                            <table class="custom-data-table resp-list">
                                 <thead>
                                     <tr>
                                         <th>Master Label</th>
@@ -752,13 +724,13 @@
                                 <tbody>
                                     <template for:each={groupsList} for:item="grp">
                                         <tr key={grp.id}>
-                                            <td><strong>{grp.masterLabel}</strong></td>
-                                            <td><code>{grp.developerName}</code></td>
-                                            <td><span class="badge-active">{grp.status}</span></td>
-                                            <td><span class="badge-count">{grp.componentCount}</span></td>
-                                            <td><span class="badge-count">{grp.assignedUserCount}</span></td>
-                                            <td>{grp.description}</td>
-                                            <td class="slds-text-align_right">
+                                            <td data-label="Master Label"><strong>{grp.masterLabel}</strong></td>
+                                            <td data-label="Developer Name"><code>{grp.developerName}</code></td>
+                                            <td data-label="Status"><span class="badge-active">{grp.status}</span></td>
+                                            <td data-label="Included Sets"><span class="badge-count">{grp.componentCount}</span></td>
+                                            <td data-label="Assigned Users"><span class="badge-count">{grp.assignedUserCount}</span></td>
+                                            <td data-label="Description">{grp.description}</td>
+                                            <td data-label="Action" class="slds-text-align_right">
                                                 <lightning-button
                                                     label="View & Manage"
                                                     icon-name="utility:preview"
@@ -872,28 +844,18 @@
                                         <th>Profile Name</th>
                                         <th>User License</th>
                                         <th>User Type</th>
-                                        <th>Associated Users</th>
-                                        <th>Description</th>
-                                        <th class="slds-text-align_right">Action</th>
+                                        <th class="slds-text-align_center">Associated Users</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <template for:each={profilesList} for:item="p">
                                         <tr key={p.id}>
-                                            <td data-label="Profile Name"><strong>{p.name}</strong></td>
+                                            <td data-label="Profile Name">
+                                                <button class="link-name" data-id={p.id} onclick={handleViewProfileDetail} title="Manage access">{p.name}</button>
+                                            </td>
                                             <td data-label="User License">{p.userLicenseName}</td>
                                             <td data-label="User Type">{p.userType}</td>
-                                            <td data-label="Users"><span class="badge-count">{p.userCount}</span></td>
-                                            <td data-label="Description">{p.description}</td>
-                                            <td data-label="Action" class="slds-text-align_right">
-                                                <lightning-button
-                                                    label="Manage Access"
-                                                    icon-name="utility:edit"
-                                                    variant="brand"
-                                                    data-id={p.id}
-                                                    onclick={handleViewProfileDetail}
-                                                ></lightning-button>
-                                            </td>
+                                            <td data-label="Users" class="slds-text-align_center"><span class="badge-count">{p.userCount}</span></td>
                                         </tr>
                                     </template>
                                 </tbody>
@@ -958,7 +920,7 @@
                     </template>
 
                     <div class="styled-table-container">
-                        <table class="custom-data-table">
+                        <table class="custom-data-table resp-list">
                             <thead>
                                 <tr>
                                     <th>Object Label</th>
@@ -977,34 +939,34 @@
                                 <template lwc:if={hasObjPermItems}>
                                     <template for:each={objPermItems} for:item="op">
                                         <tr key={op.sobjectType}>
-                                            <td><strong>{op.sobjectLabel}</strong></td>
-                                            <td><code>{op.sobjectType}</code></td>
-                                            <td><span class={op.typeClass}>{op.typeBadge}</span></td>
-                                            <td class="slds-text-align_center">
+                                            <td data-label="Object Label"><strong>{op.sobjectLabel}</strong></td>
+                                            <td data-label="API Name"><code>{op.sobjectType}</code></td>
+                                            <td data-label="Type"><span class={op.typeClass}>{op.typeBadge}</span></td>
+                                            <td data-label="Read" class="slds-text-align_center">
                                                 <template lwc:if={op.permissionsRead}><span class="perm-check-true">✓</span></template>
                                                 <template lwc:else><span class="perm-check-false">—</span></template>
                                             </td>
-                                            <td class="slds-text-align_center">
+                                            <td data-label="Create" class="slds-text-align_center">
                                                 <template lwc:if={op.permissionsCreate}><span class="perm-check-true">✓</span></template>
                                                 <template lwc:else><span class="perm-check-false">—</span></template>
                                             </td>
-                                            <td class="slds-text-align_center">
+                                            <td data-label="Edit" class="slds-text-align_center">
                                                 <template lwc:if={op.permissionsEdit}><span class="perm-check-true">✓</span></template>
                                                 <template lwc:else><span class="perm-check-false">—</span></template>
                                             </td>
-                                            <td class="slds-text-align_center">
+                                            <td data-label="Delete" class="slds-text-align_center">
                                                 <template lwc:if={op.permissionsDelete}><span class="perm-check-true">✓</span></template>
                                                 <template lwc:else><span class="perm-check-false">—</span></template>
                                             </td>
-                                            <td class="slds-text-align_center">
+                                            <td data-label="View All" class="slds-text-align_center">
                                                 <template lwc:if={op.permissionsViewAllRecords}><span class="perm-check-true">✓</span></template>
                                                 <template lwc:else><span class="perm-check-false">—</span></template>
                                             </td>
-                                            <td class="slds-text-align_center">
+                                            <td data-label="Modify All" class="slds-text-align_center">
                                                 <template lwc:if={op.permissionsModifyAllRecords}><span class="perm-check-true">✓</span></template>
                                                 <template lwc:else><span class="perm-check-false">—</span></template>
                                             </td>
-                                            <td class="slds-text-align_right">
+                                            <td data-label="Action" class="slds-text-align_right">
                                                 <template lwc:if={op.isEditable}>
                                                     <lightning-button
                                                         label="Edit Permissions"
@@ -1080,7 +1042,7 @@
                     </div>
 
                     <div class="styled-table-container">
-                        <table class="custom-data-table">
+                        <table class="custom-data-table resp-list">
                             <thead>
                                 <tr>
                                     <th>Field Label</th>
@@ -1096,19 +1058,19 @@
                                 <template lwc:if={hasFlsFieldItems}>
                                     <template for:each={flsFieldItems} for:item="fp">
                                         <tr key={fp.field}>
-                                            <td><strong>{fp.fieldLabel}</strong></td>
-                                            <td><code>{fp.field}</code></td>
-                                            <td><span class="slds-badge slds-theme_shade">{fp.dataType}</span></td>
-                                            <td><span class={fp.typeClass}>{fp.typeBadge}</span></td>
-                                            <td class="slds-text-align_center">
+                                            <td data-label="Field Label"><strong>{fp.fieldLabel}</strong></td>
+                                            <td data-label="API Name"><code>{fp.field}</code></td>
+                                            <td data-label="Data Type"><span class="slds-badge slds-theme_shade">{fp.dataType}</span></td>
+                                            <td data-label="Field Type"><span class={fp.typeClass}>{fp.typeBadge}</span></td>
+                                            <td data-label="Read Access" class="slds-text-align_center">
                                                 <template lwc:if={fp.permissionsRead}><span class="perm-check-true">✓</span></template>
                                                 <template lwc:else><span class="perm-check-false">—</span></template>
                                             </td>
-                                            <td class="slds-text-align_center">
+                                            <td data-label="Edit Access" class="slds-text-align_center">
                                                 <template lwc:if={fp.permissionsEdit}><span class="perm-check-true">✓</span></template>
                                                 <template lwc:else><span class="perm-check-false">—</span></template>
                                             </td>
-                                            <td class="slds-text-align_right">
+                                            <td data-label="Action" class="slds-text-align_right">
                                                 <template lwc:if={fp.isEditable}>
                                                     <lightning-button
                                                         label="Edit FLS"
@@ -1160,7 +1122,7 @@
                     </div>
 
                     <div class="styled-table-container">
-                        <table class="custom-data-table">
+                        <table class="custom-data-table resp-list">
                             <thead>
                                 <tr>
                                     <th>App Label</th>
@@ -1176,14 +1138,14 @@
                             <tbody>
                                 <template for:each={appsList} for:item="app">
                                     <tr key={app.id}>
-                                        <td><strong>{app.label}</strong></td>
-                                        <td><code>{app.developerName}</code></td>
-                                        <td><span class="slds-badge slds-theme_shade">{app.type}</span></td>
-                                        <td><span class={app.visibleClass}>{app.visibleLabel}</span></td>
-                                        <td><span class={app.accessibleClass}>{app.accessibleLabel}</span></td>
-                                        <td><span class="badge-count">{app.profilesCount}</span></td>
-                                        <td><span class="badge-count">{app.permSetsCount}</span></td>
-                                        <td class="slds-text-align_right">
+                                        <td data-label="App Label"><strong>{app.label}</strong></td>
+                                        <td data-label="Developer Name"><code>{app.developerName}</code></td>
+                                        <td data-label="Type"><span class="slds-badge slds-theme_shade">{app.type}</span></td>
+                                        <td data-label="Visibility"><span class={app.visibleClass}>{app.visibleLabel}</span></td>
+                                        <td data-label="Accessible"><span class={app.accessibleClass}>{app.accessibleLabel}</span></td>
+                                        <td data-label="Profiles with Access"><span class="badge-count">{app.profilesCount}</span></td>
+                                        <td data-label="Perm Sets with Access"><span class="badge-count">{app.permSetsCount}</span></td>
+                                        <td data-label="Setup" class="slds-text-align_right">
                                             <a href={app.setupUrl} target="_blank" class="slds-button slds-button_neutral slds-button_small">
                                                 App Manager
                                             </a>

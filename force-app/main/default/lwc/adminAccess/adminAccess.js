@@ -97,7 +97,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     @track selectedProfile = null;
 
     // SECTION 5: OBJECT ACCESS STATE
-    @track objTargetType = 'PermissionSet';
+    @track objTargetType = 'Profile';
     @track objSelectedTargetId = '';
     @track objSearchTerm = '';
     @track objPermItems = [];
@@ -895,8 +895,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
             { name: 'permSets', value: 'permSets', label: 'Permission Sets', icon: 'utility:lock' },
             { name: 'groups', value: 'groups', label: 'Permission Set Groups', icon: 'utility:groups' },
             { name: 'objects', value: 'objects', label: 'Object Access', icon: 'utility:database' },
-            { name: 'fields', value: 'fields', label: 'Field-Level Security', icon: 'utility:shield' },
-            { name: 'apps', value: 'apps', label: 'App Security', icon: 'utility:apps' }
+            { name: 'fields', value: 'fields', label: 'Field-Level Security', icon: 'utility:shield' }
         ];
     }
 

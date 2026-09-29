@@ -34,7 +34,6 @@
     border: 1px solid var(--card-border);
     overflow: visible;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    min-height: 700px;
     width: 100%;
     margin: 0;
     padding: 0;
@@ -44,40 +43,115 @@
 /* ==========================================================================
    CONSOLE & DETAIL PAGE HEADERS (SLDS page header)
    ========================================================================== */
+/* Single-row console header: title • stats • actions, on white */
 .console-header {
-    border-radius: 0;
-    border: 0;
-    border-bottom: 1px solid #e5e5e5;
-    box-shadow: none;
-}
-
-.console-stats,
-.detail-fields {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
     flex-wrap: wrap;
-    row-gap: 0.75rem;
+    background: #ffffff;
+    padding: 14px 24px;
+    border-bottom: 1px solid #e5e5e5;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    /* Keep the console header pinned while the content scrolls */
+    position: sticky;
+    top: 0;
+    z-index: 20;
 }
 
-.stat-button {
+.ch-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 230px;
+}
+
+.ch-icon {
+    flex-shrink: 0;
+}
+
+.ch-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #747474;
+    margin: 0;
+}
+
+.ch-title-main {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #181818;
+    line-height: 1.1;
+    margin: 1px 0 2px;
+}
+
+.ch-meta {
+    font-size: 0.8rem;
+    color: #747474;
+    margin: 0;
+}
+
+/* Grouped stats cluster in the middle */
+.ch-stats {
+    display: flex;
+    align-items: stretch;
+    flex-wrap: wrap;
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+    padding: 4px 2px;
+    flex: 0 1 auto;
+    justify-content: center;
+}
+
+.ch-stat {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    line-height: 1.25;
-    padding: 0.25rem 0.5rem;
-    margin-left: -0.5rem;
-    border-radius: 0.25rem;
+    gap: 1px;
+    padding: 6px 18px;
+    background: none;
+    border: 0;
+    border-right: 1px solid #eef1f4;
+    cursor: pointer;
     text-align: left;
     color: inherit;
+    font-family: inherit;
 }
 
-.stat-button:hover,
-.stat-button:focus {
-    background-color: #f3f3f3;
+.ch-stat:last-child {
+    border-right: 0;
 }
 
-.stat-number {
-    font-size: 1.25rem;
+.ch-stat:hover,
+.ch-stat:focus {
+    background: #f7f9fb;
+    border-radius: 6px;
+}
+
+.ch-stat-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #747474;
+    white-space: nowrap;
+}
+
+.ch-stat-number {
+    font-size: 1.15rem;
     font-weight: 700;
     color: #181818;
+    line-height: 1.15;
+}
+
+.ch-stat-meta {
+    font-size: 0.68rem;
+    color: #9a9a9a;
+    white-space: nowrap;
+}
+
+.ch-actions {
+    flex-shrink: 0;
 }
 
 .detail-header {
@@ -85,7 +159,28 @@
 }
 
 @media (max-width: 47.9375em) {
-    .console-stats .slds-page-header__detail-block,
+    .console-header {
+        padding: 12px 14px;
+        gap: 12px;
+    }
+    .ch-stats {
+        order: 3;
+        width: 100%;
+        justify-content: space-between;
+    }
+    .ch-stat {
+        flex: 1 1 auto;
+        padding: 6px 10px;
+        align-items: center;
+        text-align: center;
+    }
+    .ch-actions {
+        order: 2;
+    }
+    .detail-fields {
+        flex-wrap: wrap;
+        row-gap: 0.5rem;
+    }
     .detail-fields .slds-page-header__detail-block {
         flex: 1 1 45%;
         padding-right: 0.5rem;
@@ -108,12 +203,44 @@
 
 .admin-sidebar {
     position: sticky;
-    top: 0;
+    /* Pin just below the sticky console header */
+    top: 100px;
+    align-self: start;
     padding-right: 1rem;
+    max-height: calc(100vh - 116px);
+    overflow-y: auto;
 }
 
 .admin-main {
     min-width: 0;
+}
+
+/* Clickable record name in list tables */
+.link-name {
+    background: none;
+    border: 0;
+    padding: 0;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 700;
+    color: var(--brand-blue, #0176d3);
+    cursor: pointer;
+    text-align: left;
+}
+
+.link-name:hover,
+.link-name:focus {
+    text-decoration: underline;
+}
+
+/* Truncate long usernames / emails so tables never overflow horizontally */
+.cell-clip {
+    display: inline-block;
+    max-width: 15rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
 }
 
 @media (min-width: 48em) {
