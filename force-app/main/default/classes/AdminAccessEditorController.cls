@@ -103,6 +103,42 @@ public with sharing class AdminAccessEditorController {
         }
     }
 
+    @AuraEnabled
+    public static AdminSecurityDataModel.DmlResult createPermissionSet(String label, String apiName, Id licenseId, String description) {
+        try {
+            return AdminAccessEditorService.createPermissionSet(label, apiName, licenseId, description);
+        } catch (Exception ex) {
+            throw toAuraException(ex);
+        }
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static List<AdminSecurityDataModel.SelectOption> getUserLicenseOptions() {
+        try {
+            return AdminAccessEditorService.getUserLicenseOptions();
+        } catch (Exception ex) {
+            throw toAuraException(ex);
+        }
+    }
+
+    @AuraEnabled
+    public static List<AdminSecurityDataModel.AssignmentItem> getPermSetUsers(Id permSetId) {
+        try {
+            return AdminAccessEditorService.getPermSetUsers(permSetId);
+        } catch (Exception ex) {
+            throw toAuraException(ex);
+        }
+    }
+
+    @AuraEnabled
+    public static AdminSecurityDataModel.DmlResult setPermSetUser(Id permSetId, Id userId, Boolean assign) {
+        try {
+            return AdminAccessEditorService.setPermSetUser(permSetId, userId, assign);
+        } catch (Exception ex) {
+            throw toAuraException(ex);
+        }
+    }
+
     private static AuraHandledException toAuraException(Exception ex) {
         if (ex instanceof AuraHandledException) {
             return (AuraHandledException) ex;

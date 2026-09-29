@@ -238,6 +238,42 @@
                 <!-- TAB 2: PERMISSION SETS                                     -->
                 <!-- ---------------------------------------------------------- -->
                 <template lwc:if={isPermSetsTab}>
+                    <template lwc:if={isEditingPermSet}>
+                        <!-- FULL ACCESS EDITOR FOR A (NEW) PERMISSION SET -->
+                        <div class="detail-hero-banner">
+                            <div class="hero-identity">
+                                <div class="hero-avatar">
+                                    <lightning-icon icon-name="standard:user_role" size="medium" variant="inverse"></lightning-icon>
+                                </div>
+                                <div class="hero-title-block">
+                                    <div class="hero-main-title">
+                                        <span>{editingPermSetLabel}</span>
+                                        <span class="badge-editable">Editing access</span>
+                                    </div>
+                                    <div class="hero-subtitle">
+                                        <span>Grant object, field, Apex class, flow and app access, then assign users on the Assigned Users tab.</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="hero-actions">
+                                <lightning-button
+                                    label="← Back to Permission Sets"
+                                    icon-name="utility:back"
+                                    variant="neutral"
+                                    onclick={handleClosePermSetEditor}
+                                ></lightning-button>
+                            </div>
+                        </div>
+
+                        <c-admin-access-editor
+                            target-type="PermissionSet"
+                            target-id={editingPermSetId}
+                            initial-tab={editingPermSetInitialTab}
+                            onaccesschange={handleEditorAccessChange}
+                        ></c-admin-access-editor>
+                    </template>
+
+                    <template lwc:else>
                     <template lwc:if={selectedPermSet}>
                         <!-- PERMISSION SET DETAIL VIEW -->
                         <div class="detail-hero-banner">
@@ -503,48 +539,69 @@
                                 </div>
                             </div>
                             <div class="toolbar-actions">
-                                <span class="slds-text-body_small slds-text-color_weak">
+                                <span class="slds-text-body_small slds-text-color_weak slds-m-right_small">
                                     Showing {permSetsList.length} Permission Set(s)
                                 </span>
+                                <lightning-button
+                                    label="New Permission Set"
+                                    icon-name="utility:add"
+                                    variant="brand"
+                                    onclick={handleNewPermSetClick}
+                                ></lightning-button>
                             </div>
                         </div>
 
                         <div class="styled-table-container">
-                            <table class="custom-data-table resp-list">
+                            <table class="custom-data-table resp-list simple-list">
                                 <thead>
                                     <tr>
-                                        <th>Label</th>
-                                        <th>API Name</th>
+                                        <th>Permission Set</th>
                                         <th>Type</th>
                                         <th>License</th>
-                                        <th>Assigned Users</th>
-                                        <th>Description</th>
+                                        <th class="slds-text-align_center">Users</th>
                                         <th class="slds-text-align_right">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <template for:each={permSetsList} for:item="ps">
                                         <tr key={ps.id}>
-                                            <td data-label="Label"><strong>{ps.label}</strong></td>
-                                            <td data-label="API Name"><code>{ps.name}</code></td>
+                                            <td data-label="Permission Set">
+                                                <div class="cell-title">{ps.label}</div>
+                                                <div class="cell-sub"><code>{ps.name}</code></div>
+                                                <template lwc:if={ps.description}>
+                                                    <div class="cell-sub cell-clip-line" title={ps.description}>{ps.description}</div>
+                                                </template>
+                                            </td>
                                             <td data-label="Type"><span class={ps.typeClass}>{ps.typeBadge}</span></td>
-                                            <td data-label="License">{ps.licenseName}</td>
-                                            <td data-label="Assigned Users"><span class="badge-count">{ps.userCount}</span></td>
-                                            <td data-label="Description">{ps.description}</td>
+                                            <td data-label="License"><div class="cell-clip-line" title={ps.licenseName}>{ps.licenseName}</div></td>
+                                            <td data-label="Users" class="slds-text-align_center"><span class="badge-count">{ps.userCount}</span></td>
                                             <td data-label="Action" class="slds-text-align_right">
-                                                <lightning-button
-                                                    label="View & Manage"
-                                                    icon-name="utility:preview"
-                                                    variant="neutral"
-                                                    data-id={ps.id}
-                                                    onclick={handleViewPermSetDetail}
-                                                ></lightning-button>
+                                                <lightning-button-group>
+                                                    <lightning-button
+                                                        label="View"
+                                                        icon-name="utility:preview"
+                                                        variant="neutral"
+                                                        data-id={ps.id}
+                                                        onclick={handleViewPermSetDetail}
+                                                    ></lightning-button>
+                                                    <template lwc:if={ps.isCustom}>
+                                                        <lightning-button
+                                                            label="Edit"
+                                                            icon-name="utility:edit"
+                                                            variant="brand-outline"
+                                                            data-id={ps.id}
+                                                            data-label={ps.label}
+                                                            onclick={handleOpenPermSetEditor}
+                                                        ></lightning-button>
+                                                    </template>
+                                                </lightning-button-group>
                                             </td>
                                         </tr>
                                     </template>
                                 </tbody>
                             </table>
                         </div>
+                    </template>
                     </template>
                 </template>
 
@@ -709,30 +766,32 @@
                         </div>
 
                         <div class="styled-table-container">
-                            <table class="custom-data-table resp-list">
+                            <table class="custom-data-table resp-list simple-list">
                                 <thead>
                                     <tr>
-                                        <th>Master Label</th>
-                                        <th>Developer Name</th>
+                                        <th>Permission Set Group</th>
                                         <th>Status</th>
-                                        <th>Included Sets</th>
-                                        <th>Assigned Users</th>
-                                        <th>Description</th>
+                                        <th class="slds-text-align_center">Sets</th>
+                                        <th class="slds-text-align_center">Users</th>
                                         <th class="slds-text-align_right">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <template for:each={groupsList} for:item="grp">
                                         <tr key={grp.id}>
-                                            <td data-label="Master Label"><strong>{grp.masterLabel}</strong></td>
-                                            <td data-label="Developer Name"><code>{grp.developerName}</code></td>
+                                            <td data-label="Permission Set Group">
+                                                <div class="cell-title">{grp.masterLabel}</div>
+                                                <div class="cell-sub"><code>{grp.developerName}</code></div>
+                                                <template lwc:if={grp.description}>
+                                                    <div class="cell-sub cell-clip-line" title={grp.description}>{grp.description}</div>
+                                                </template>
+                                            </td>
                                             <td data-label="Status"><span class="badge-active">{grp.status}</span></td>
-                                            <td data-label="Included Sets"><span class="badge-count">{grp.componentCount}</span></td>
-                                            <td data-label="Assigned Users"><span class="badge-count">{grp.assignedUserCount}</span></td>
-                                            <td data-label="Description">{grp.description}</td>
+                                            <td data-label="Sets" class="slds-text-align_center"><span class="badge-count">{grp.componentCount}</span></td>
+                                            <td data-label="Users" class="slds-text-align_center"><span class="badge-count">{grp.assignedUserCount}</span></td>
                                             <td data-label="Action" class="slds-text-align_right">
                                                 <lightning-button
-                                                    label="View & Manage"
+                                                    label="View"
                                                     icon-name="utility:preview"
                                                     variant="neutral"
                                                     data-id={grp.id}
@@ -1184,6 +1243,65 @@
                     <div class="slds-modal__footer">
                         <lightning-button label="Cancel" onclick={handleCloseProfileModal}></lightning-button>
                         <lightning-button label="Save" variant="brand" class="slds-m-left_x-small" onclick={handleSaveUserProfile} disabled={profileSaveDisabled}></lightning-button>
+                    </div>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+        </template>
+
+        <!-- ============================================================== -->
+        <!-- CREATE PERMISSION SET MODAL                                    -->
+        <!-- ============================================================== -->
+        <template lwc:if={showCreatePsModal}>
+            <section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="create-ps-heading" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <div class="slds-modal__header">
+                        <h1 id="create-ps-heading" class="slds-modal__title slds-hyphenate">New Permission Set</h1>
+                    </div>
+                    <div class="slds-modal__content slds-p-around_medium">
+                        <p class="slds-m-bottom_small slds-text-body_small slds-text-color_weak">
+                            Create the permission set, then configure Apex class, flow, object and field access and assign users in the editor that opens.
+                        </p>
+                        <lightning-input
+                            label="Label"
+                            required
+                            value={newPs.label}
+                            data-field="label"
+                            onchange={handleNewPsFieldChange}
+                            class="slds-m-bottom_small"
+                        ></lightning-input>
+                        <lightning-input
+                            label="API Name"
+                            placeholder="Leave blank to derive from the label"
+                            value={newPs.apiName}
+                            data-field="apiName"
+                            onchange={handleNewPsFieldChange}
+                            class="slds-m-bottom_small"
+                        ></lightning-input>
+                        <lightning-combobox
+                            label="License"
+                            value={newPs.licenseId}
+                            options={licenseOptions}
+                            data-field="licenseId"
+                            onchange={handleNewPsFieldChange}
+                            class="slds-m-bottom_small"
+                        ></lightning-combobox>
+                        <lightning-textarea
+                            label="Description"
+                            value={newPs.description}
+                            data-field="description"
+                            onchange={handleNewPsFieldChange}
+                        ></lightning-textarea>
+                    </div>
+                    <div class="slds-modal__footer">
+                        <lightning-button label="Cancel" onclick={handleCloseCreatePsModal}></lightning-button>
+                        <lightning-button
+                            label="Create & Configure"
+                            variant="brand"
+                            class="slds-m-left_x-small"
+                            onclick={handleCreatePermSet}
+                            disabled={createPsSaveDisabled}
+                        ></lightning-button>
                     </div>
                 </div>
             </section>

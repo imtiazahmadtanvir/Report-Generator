@@ -6,6 +6,7 @@ private class AdminAccessEditorControllerTest {
 
     private static final String USER_TYPE = AdminAccessEditorService.TYPE_USER;
     private static final String PROFILE_TYPE = AdminAccessEditorService.TYPE_PROFILE;
+    private static final String PERMSET_TYPE = AdminAccessEditorService.TYPE_PERMISSION_SET;
 
     @testSetup
     static void setupTestData() {
@@ -186,6 +187,66 @@ private class AdminAccessEditorControllerTest {
 
         Assert.isNotNull(rts, 'Record type list should not be null');
         Assert.isTrue(noObj.success && noFld.success && noEnt.success, 'Empty change sets are no-ops');
+    }
+
+    @isTest
+    static void testCreatePermissionSetAndEdit() {
+        Test.startTest();
+        List<AdminSecurityDataModel.SelectOption> licenses = AdminAccessEditorController.getUserLicenseOptions();
+        AdminSecurityDataModel.DmlResult created = AdminAccessEditorController.createPermissionSet(
+            'AAC New Set Test', '', null, 'Created by test');
+        Test.stopTest();
+
+        Assert.isFalse(licenses.isEmpty(), 'License options should include at least the None entry');
+        Assert.isTrue(created.success, 'Permission set creation should succeed');
+        Assert.isNotNull(created.recordId, 'A new permission set id should be returned');
+
+        PermissionSet ps = [SELECT Id, Name, Label FROM PermissionSet WHERE Id = :created.recordId];
+        Assert.areEqual('AAC_New_Set_Test', ps.Name, 'API name should be derived from the label');
+
+        // The new set is a valid editor target and is editable.
+        AdminSecurityDataModel.AccessContext ctx = AdminAccessEditorController.getAccessContext(PERMSET_TYPE, ps.Id);
+        Assert.areEqual(PERMSET_TYPE, ctx.targetType, 'Target type should be PermissionSet');
+        Assert.isTrue(ctx.canEditObjectAccess, 'A custom permission set should be editable');
+
+        AdminSecurityDataModel.DmlResult objRes = AdminAccessEditorController.saveObjectAccess(PERMSET_TYPE, ps.Id,
+            JSON.serialize(new List<Map<String, Object>>{ new Map<String, Object>{ 'sobjectType' => 'Account', 'canRead' => true } }));
+        Assert.isTrue(objRes.success, 'Object access should save directly to the set: ' + objRes.errors);
+        Assert.areEqual(1, [SELECT count() FROM ObjectPermissions WHERE ParentId = :ps.Id AND SobjectType = 'Account'],
+            'Object permission should be written to the new permission set');
+    }
+
+    @isTest
+    static void testPermSetUserAssignment() {
+        Id psId = testPermSetId();
+        Id userId = UserInfo.getUserId();
+
+        Test.startTest();
+        List<AdminSecurityDataModel.AssignmentItem> before = AdminAccessEditorController.getPermSetUsers(psId);
+        AdminSecurityDataModel.DmlResult assigned = AdminAccessEditorController.setPermSetUser(psId, userId, true);
+        AdminSecurityDataModel.DmlResult removed = AdminAccessEditorController.setPermSetUser(psId, userId, false);
+        Test.stopTest();
+
+        Assert.isFalse(before.isEmpty(), 'Active users should be listed for assignment');
+        Assert.isTrue(assigned.success, 'Assigning the set to a user should succeed');
+        Assert.isTrue(removed.success, 'Removing the set from a user should succeed');
+        Assert.areEqual(0, [SELECT count() FROM PermissionSetAssignment WHERE AssigneeId = :userId AND PermissionSetId = :psId],
+            'Assignment should be removed');
+    }
+
+    @isTest
+    static void testCreatePermissionSetGuards() {
+        Integer failures = 0;
+        Test.startTest();
+        try { AdminAccessEditorController.createPermissionSet('', '', null, null); } catch (AuraHandledException ex) { failures++; }
+        // Duplicate API name
+        AdminAccessEditorController.createPermissionSet('Dup Set', 'AAC_Dup_Set', null, null);
+        try { AdminAccessEditorController.createPermissionSet('Dup Set Two', 'AAC_Dup_Set', null, null); } catch (AuraHandledException ex) { failures++; }
+        try { AdminAccessEditorController.getPermSetUsers(null); } catch (AuraHandledException ex) { failures++; }
+        try { AdminAccessEditorController.setPermSetUser(null, UserInfo.getUserId(), true); } catch (AuraHandledException ex) { failures++; }
+        Test.stopTest();
+
+        Assert.areEqual(4, failures, 'Invalid create/assign requests should raise AuraHandledException');
     }
 
     @isTest

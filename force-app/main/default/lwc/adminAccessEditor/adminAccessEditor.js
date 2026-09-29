@@ -13,6 +13,8 @@ import saveObjectAccess from '@salesforce/apex/AdminAccessEditorController.saveO
 import getFieldAccess from '@salesforce/apex/AdminAccessEditorController.getFieldAccess';
 import saveFieldAccess from '@salesforce/apex/AdminAccessEditorController.saveFieldAccess';
 import getRecordTypes from '@salesforce/apex/AdminAccessEditorController.getRecordTypes';
+import getPermSetUsers from '@salesforce/apex/AdminAccessEditorController.getPermSetUsers';
+import setPermSetUser from '@salesforce/apex/AdminAccessEditorController.setPermSetUser';
 
 const PAGE_SIZE = 100;
 
@@ -60,6 +62,17 @@ const PROFILE_TABS = [
     { value: 'users', label: 'Users', icon: 'utility:user' },
     { value: 'system', label: 'System Perms', icon: 'utility:settings' }
 ];
+// A permission set is edited directly, so it shows the access categories plus a Users tab that
+// assigns the set to individual users. Perm-set / group / system tabs do not apply to a set itself.
+const PERMSET_TABS = [
+    { value: 'objects', label: 'Objects', icon: 'utility:database' },
+    { value: 'fields', label: 'Fields', icon: 'utility:rows' },
+    { value: 'apps', label: 'Apps', icon: 'utility:apps' },
+    { value: 'apex', label: 'Apex Classes', icon: 'utility:apex' },
+    { value: 'flows', label: 'Flows', icon: 'utility:flow' },
+    { value: 'recordTypes', label: 'Record Types', icon: 'utility:record_create' },
+    { value: 'psUsers', label: 'Assigned Users', icon: 'utility:user' }
+];
 
 // Section intro shown above each category. {subject} is replaced with the user/profile phrasing.
 const SECTION_META = {
@@ -72,7 +85,8 @@ const SECTION_META = {
     flows: { icon: 'utility:flow', title: 'Flows', subtitle: 'Allow {subject} to run access-restricted flows.' },
     recordTypes: { icon: 'utility:record_create', title: 'Record Types', subtitle: 'Review record types. Visibility is assigned in Setup.' },
     users: { icon: 'utility:user', title: 'Users on this Profile', subtitle: 'Everyone who currently has this profile.' },
-    system: { icon: 'utility:settings', title: 'System Privileges', subtitle: 'Key administrative permissions granted by this profile.' }
+    system: { icon: 'utility:settings', title: 'System Privileges', subtitle: 'Key administrative permissions granted by this profile.' },
+    psUsers: { icon: 'utility:user', title: 'Assigned Users', subtitle: 'Assign or remove this permission set for individual users.' }
 };
 
 const newFilters = () => ({ search: '', type: 'all', access: 'all', limit: PAGE_SIZE });
@@ -80,6 +94,7 @@ const newFilters = () => ({ search: '', type: 'all', access: 'all', limit: PAGE_
 export default class AdminAccessEditor extends NavigationMixin(LightningElement) {
     _targetType;
     _targetId;
+    _initialTab;
     _connected = false;
     _inflight = {};
 
@@ -96,6 +111,7 @@ export default class AdminAccessEditor extends NavigationMixin(LightningElement)
     @track groups = [];
     @track entities = { TabSet: [], ApexClass: [], FlowDefinition: [] };
     @track recordTypes = [];
+    @track psUsers = [];
 
     @track filters = {
         objects: newFilters(),
@@ -105,7 +121,8 @@ export default class AdminAccessEditor extends NavigationMixin(LightningElement)
         apps: newFilters(),
         apex: newFilters(),
         flows: newFilters(),
-        recordTypes: newFilters()
+        recordTypes: newFilters(),
+        psUsers: newFilters()
     };
 
     // Pending edits, keyed by object API name / full field name / entity id
@@ -146,6 +163,21 @@ export default class AdminAccessEditor extends NavigationMixin(LightningElement)
     set targetId(value) {
         this._targetId = value;
         this.reset();
+    }
+
+    /** Opens the editor focused on a specific category tab (e.g. 'objects', 'apex', 'psUsers'). */
+    @api
+    get initialTab() {
+        return this._initialTab;
+    }
+    set initialTab(value) {
+        this._initialTab = value;
+        if (value) {
+            this.activeTab = value;
+            if (this._connected && this._targetType && this._targetId) {
+                this.loadTab(value);
+            }
+        }
     }
 
     /** Reload everything, keeping the current tab. */
@@ -228,6 +260,9 @@ export default class AdminAccessEditor extends NavigationMixin(LightningElement)
                 }
                 case 'recordTypes':
                     this.recordTypes = await getRecordTypes();
+                    break;
+                case 'psUsers':
+                    this.psUsers = await getPermSetUsers({ permSetId: this._targetId });
                     break;
                 default:
                     break;
@@ -714,6 +749,9 @@ export default class AdminAccessEditor extends NavigationMixin(LightningElement)
     }
 
     get recordTypeSetupLabel() {
+        if (this.isPermissionSet) {
+            return 'Open this permission set in Setup';
+        }
         if (!this.isUser) {
             return 'Open profile record type settings in Setup';
         }
@@ -739,6 +777,74 @@ export default class AdminAccessEditor extends NavigationMixin(LightningElement)
             statusLabel: sp.isEnabled ? 'Enabled' : 'Disabled',
             badgeClass: sp.isEnabled ? 'slds-badge slds-theme_success' : 'slds-badge'
         }));
+    }
+
+    // =========================================================================
+    // PERMISSION SET: ASSIGNED USERS
+    // =========================================================================
+
+    get psUsersFilters() {
+        return this.filters.psUsers;
+    }
+
+    get psUsersView() {
+        const f = this.filters.psUsers;
+        const term = f.search.trim().toLowerCase();
+
+        const matches = this.psUsers.filter(item => {
+            if (term && !(item.label || '').toLowerCase().includes(term)
+                && !(item.apiName || '').toLowerCase().includes(term)
+                && !(item.description || '').toLowerCase().includes(term)) {
+                return false;
+            }
+            if (f.access === 'with' && !item.isAssigned) return false;
+            if (f.access === 'without' && item.isAssigned) return false;
+            return true;
+        });
+
+        const rows = matches.slice(0, f.limit).map(item => ({
+            id: item.id,
+            name: item.label,
+            username: item.apiName,
+            email: item.description,
+            profileName: item.typeLabel,
+            statusLabel: item.status,
+            badgeClass: item.isAssigned ? 'slds-badge slds-theme_success' : 'slds-badge',
+            assignedLabel: item.isAssigned ? 'Assigned' : 'Not assigned',
+            showAssign: !item.isAssigned,
+            showRemove: item.isAssigned
+        }));
+
+        return this.buildView(rows, matches.length, this.psUsers.length, 'psUsers');
+    }
+
+    async handlePsUserAssignment(event) {
+        const { id, name } = event.currentTarget.dataset;
+        const assign = event.currentTarget.dataset.assign === 'true';
+        const setLabel = this.context ? this.context.name : 'this permission set';
+
+        if (!assign) {
+            const confirmed = await LightningConfirm.open({
+                message: `Remove "${setLabel}" from ${name}? They lose any access it grants.`,
+                label: 'Remove permission set',
+                theme: 'warning'
+            });
+            if (!confirmed) {
+                return;
+            }
+        }
+
+        this.busyCount++;
+        try {
+            const res = await setPermSetUser({ permSetId: this._targetId, userId: id, assign });
+            this.showResult(res);
+            await Promise.all([this.loadContext(), this.loadTab('psUsers', true)]);
+            this.notifyChange();
+        } catch (error) {
+            this.toast('Update failed', this.errorMessage(error), 'error');
+        } finally {
+            this.busyCount--;
+        }
     }
 
     // =========================================================================
@@ -847,6 +953,9 @@ export default class AdminAccessEditor extends NavigationMixin(LightningElement)
     // =========================================================================
 
     get tabs() {
+        if (this.isPermissionSet) {
+            return PERMSET_TABS;
+        }
         return this.isUser ? USER_TABS : PROFILE_TABS;
     }
 
@@ -865,6 +974,9 @@ export default class AdminAccessEditor extends NavigationMixin(LightningElement)
     }
 
     get subjectNoun() {
+        if (this.isPermissionSet) {
+            return this.context ? `the ${this.context.name} permission set` : 'this permission set';
+        }
         if (!this.context) {
             return this.isUser ? 'this user' : 'this profile';
         }
@@ -873,6 +985,10 @@ export default class AdminAccessEditor extends NavigationMixin(LightningElement)
 
     get isUser() {
         return this._targetType === 'User';
+    }
+
+    get isPermissionSet() {
+        return this._targetType === 'PermissionSet';
     }
 
     get isBusy() {
@@ -887,6 +1003,10 @@ export default class AdminAccessEditor extends NavigationMixin(LightningElement)
         const ctx = this.context;
         if (!ctx) {
             return '';
+        }
+        if (this.isPermissionSet) {
+            const users = ctx.activeUserCount === 1 ? '1 user' : `${ctx.activeUserCount} users`;
+            return `Changes are saved directly to the "${ctx.name}" permission set, which is currently assigned to ${users}. Use the Assigned Users tab to grant it to more people.`;
         }
         if (this.isUser) {
             const ps = ctx.editPermSetLabel || 'a personal permission set';
@@ -927,6 +1047,10 @@ export default class AdminAccessEditor extends NavigationMixin(LightningElement)
 
     get isSystemTab() {
         return this.activeTab === 'system';
+    }
+
+    get isPsUsersTab() {
+        return this.activeTab === 'psUsers';
     }
 
     buildView(rows, matchCount, totalCount, tab) {

@@ -10,6 +10,7 @@ public with sharing class AdminAccessEditorService {
 
     public static final String TYPE_PROFILE = 'Profile';
     public static final String TYPE_USER = 'User';
+    public static final String TYPE_PERMISSION_SET = 'PermissionSet';
     public static final String KIND_PERMISSION_SET = 'PermissionSet';
     public static final String KIND_PERMISSION_SET_GROUP = 'PermissionSetGroup';
     public static final String PERSONAL_PS_PREFIX = 'AAC_User_';
@@ -45,6 +46,7 @@ public with sharing class AdminAccessEditorService {
         }
 
         Boolean canEditObjectAccess() {
+            // For a permission set target, isCustomProfile carries the set's IsCustom flag.
             return targetType == TYPE_USER || (isCustomProfile && !hasModifyAllData);
         }
     }
@@ -81,6 +83,26 @@ public with sharing class AdminAccessEditorService {
             t.hasModifyAllData = ps.PermissionsModifyAllData;
             t.editPermSetId = ps.Id;
             t.editPermSetLabel = 'Profile: ' + ps.Profile.Name;
+            t.editPermSetAssigned = true;
+        } else if (targetType == TYPE_PERMISSION_SET) {
+            List<PermissionSet> psList = [
+                SELECT Id, Name, Label, IsCustom, IsOwnedByProfile, PermissionsModifyAllData
+                FROM PermissionSet
+                WHERE Id = :targetId
+                LIMIT 1
+            ];
+            if (psList.isEmpty()) {
+                throw new EditorException('Permission set not found.');
+            }
+            PermissionSet ps = psList[0];
+            if (ps.IsOwnedByProfile) {
+                throw new EditorException('This permission set belongs to a profile. Edit the profile instead.');
+            }
+            t.name = ps.Label;
+            t.isCustomProfile = ps.IsCustom; // reused as "is custom / editable"
+            t.hasModifyAllData = ps.PermissionsModifyAllData;
+            t.editPermSetId = ps.Id;
+            t.editPermSetLabel = ps.Label;
             t.editPermSetAssigned = true;
         } else if (targetType == TYPE_USER) {
             User u = [SELECT Id, Name, ProfileId, Profile.Name FROM User WHERE Id = :targetId LIMIT 1];
@@ -208,6 +230,17 @@ public with sharing class AdminAccessEditorService {
             ctx.users = detail.associatedUsers;
             ctx.systemPermissions = detail.systemPermissions;
             ctx.activeUserCount = [SELECT count() FROM User WHERE ProfileId = :t.targetId AND IsActive = true];
+        } else if (t.targetType == TYPE_PERMISSION_SET) {
+            ctx.setupUrl = '/lightning/setup/PermSets/page?address=%2F' + t.targetId;
+            ctx.activeUserCount = [
+                SELECT count() FROM PermissionSetAssignment
+                WHERE PermissionSetId = :t.targetId AND PermissionSetGroupId = null
+            ];
+            if (!t.isCustomProfile) {
+                ctx.readOnlyReason = 'This is a managed (installed) permission set. Its object and field permissions are controlled by the package and cannot be changed here.';
+            } else if (t.hasModifyAllData) {
+                ctx.readOnlyReason = 'This permission set has "Modify All Data", which already grants full object and field access.';
+            }
         } else {
             ctx.setupUrl = '/lightning/setup/ManageUsers/page?address=%2F' + t.targetId + '%3Fnoredirect%3D1';
             ctx.activeUserCount = 1;
@@ -838,6 +871,126 @@ public with sharing class AdminAccessEditorService {
         u.ProfileId = p.Id;
         update u;
         return new AdminSecurityDataModel.DmlResult(true, u.Name + ' now uses the ' + p.Name + ' profile.', u.Id);
+    }
+
+    // =========================================================================
+    // CREATE PERMISSION SET
+    // =========================================================================
+
+    /**
+     * @description Create a new, empty custom permission set. Object/field/apex/flow access and user
+     * assignments are then configured through the editor with targetType 'PermissionSet'.
+     * @param label Display label (required).
+     * @param apiName Optional API name; derived from the label when blank.
+     * @param licenseId Optional UserLicense Id; null creates a license-free set.
+     */
+    public static AdminSecurityDataModel.DmlResult createPermissionSet(String label, String apiName, Id licenseId, String description) {
+        AdminSecurityService.verifyAdminAccess();
+        if (String.isBlank(label)) {
+            throw new EditorException('A label is required to create a permission set.');
+        }
+        String name = sanitizeApiName(String.isBlank(apiName) ? label : apiName);
+        if (String.isBlank(name)) {
+            throw new EditorException('Could not derive a valid API name. Enter one using letters, numbers and underscores.');
+        }
+        if (![SELECT Id FROM PermissionSet WHERE Name = :name LIMIT 1].isEmpty()) {
+            throw new EditorException('A permission set with the API name "' + name + '" already exists. Choose another name.');
+        }
+
+        PermissionSet ps = new PermissionSet(
+            Label = label.abbreviate(80),
+            Name = name,
+            Description = String.isBlank(description) ? null : description.abbreviate(255)
+        );
+        if (licenseId != null) {
+            ps.LicenseId = licenseId;
+        }
+        insert ps;
+        return new AdminSecurityDataModel.DmlResult(true, 'Permission set "' + ps.Label + '" created.', ps.Id);
+    }
+
+    /** @description User licenses available for a new permission set, plus a license-free option. */
+    public static List<AdminSecurityDataModel.SelectOption> getUserLicenseOptions() {
+        AdminSecurityService.verifyAdminAccess();
+        List<AdminSecurityDataModel.SelectOption> options = new List<AdminSecurityDataModel.SelectOption>();
+        options.add(new AdminSecurityDataModel.SelectOption('None — no user license', ''));
+        for (UserLicense ul : [SELECT Id, Name FROM UserLicense ORDER BY Name ASC]) {
+            options.add(new AdminSecurityDataModel.SelectOption(ul.Name, ul.Id));
+        }
+        return options;
+    }
+
+    /**
+     * @description Turn free text into a valid permission set API name: starts with a letter,
+     * only letters/digits/underscores, no doubled or trailing underscores, max 40 chars.
+     */
+    private static String sanitizeApiName(String raw) {
+        String name = raw.trim().replaceAll('[^a-zA-Z0-9]+', '_').replaceAll('_+', '_');
+        name = name.removeStart('_').removeEnd('_');
+        if (String.isBlank(name)) {
+            return null;
+        }
+        if (!Pattern.matches('^[a-zA-Z].*', name)) {
+            name = 'X_' + name;
+        }
+        if (name.length() > 40) {
+            name = name.substring(0, 40).removeEnd('_');
+        }
+        return name;
+    }
+
+    // =========================================================================
+    // PERMISSION SET: USER ASSIGNMENTS (Users tab)
+    // =========================================================================
+
+    /** @description Active users, each flagged with whether this permission set is assigned to them. */
+    public static List<AdminSecurityDataModel.AssignmentItem> getPermSetUsers(Id permSetId) {
+        AdminSecurityService.verifyAdminAccess();
+        if (permSetId == null) {
+            throw new EditorException('Select a permission set first.');
+        }
+
+        Set<Id> assignedIds = new Set<Id>();
+        for (PermissionSetAssignment psa : [
+            SELECT AssigneeId FROM PermissionSetAssignment
+            WHERE PermissionSetId = :permSetId AND PermissionSetGroupId = null
+        ]) {
+            assignedIds.add(psa.AssigneeId);
+        }
+
+        List<AdminSecurityDataModel.AssignmentItem> items = new List<AdminSecurityDataModel.AssignmentItem>();
+        for (User u : [
+            SELECT Id, Name, Username, Email, IsActive, Profile.Name
+            FROM User
+            WHERE IsActive = true
+            ORDER BY Name ASC
+            LIMIT 2000
+        ]) {
+            AdminSecurityDataModel.AssignmentItem item = new AdminSecurityDataModel.AssignmentItem();
+            item.id = u.Id;
+            item.label = u.Name;
+            item.apiName = u.Username;
+            item.description = u.Email;
+            item.typeLabel = u.Profile != null ? u.Profile.Name : '—';
+            item.status = u.IsActive ? 'Active' : 'Inactive';
+            item.isAssigned = assignedIds.contains(u.Id);
+            item.assignedCount = item.isAssigned ? 1 : 0;
+            item.totalCount = 1;
+            items.add(item);
+        }
+        items.sort();
+        return items;
+    }
+
+    /** @description Assign or remove this permission set for a single user. */
+    public static AdminSecurityDataModel.DmlResult setPermSetUser(Id permSetId, Id userId, Boolean assign) {
+        AdminSecurityService.verifyAdminAccess();
+        if (permSetId == null || userId == null) {
+            throw new EditorException('A permission set and a user are required.');
+        }
+        return assign
+            ? AdminSecurityService.assignPermissionSetToUser(userId, permSetId)
+            : AdminSecurityService.removePermissionSetFromUser(userId, permSetId);
     }
 
     // =========================================================================

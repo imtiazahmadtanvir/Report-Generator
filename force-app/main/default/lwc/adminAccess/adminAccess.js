@@ -28,6 +28,8 @@ import saveObjectPermissions from '@salesforce/apex/AdminAccessController.saveOb
 import saveFieldPermissions from '@salesforce/apex/AdminAccessController.saveFieldPermissions';
 import toggleUserActiveStatus from '@salesforce/apex/AdminAccessController.toggleUserActiveStatus';
 import changeUserProfile from '@salesforce/apex/AdminAccessEditorController.changeUserProfile';
+import createPermissionSet from '@salesforce/apex/AdminAccessEditorController.createPermissionSet';
+import getUserLicenseOptions from '@salesforce/apex/AdminAccessEditorController.getUserLicenseOptions';
 
 export default class AdminAccess extends NavigationMixin(LightningElement) {
     @track isLoading = false;
@@ -139,6 +141,15 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
     @track showEditFieldModal = false;
     @track editFieldData = {};
+
+    // CREATE PERMISSION SET + FULL EDITOR
+    @track showCreatePsModal = false;
+    @track newPs = { label: '', apiName: '', licenseId: '', description: '' };
+    @track licenseOptions = [];
+    @track editingPermSetId = null;
+    @track editingPermSetLabel = '';
+    @track editingPermSetInitialTab = 'objects';
+    pendingEditorTab = 'objects';
 
     connectedCallback() {
         this.loadInitialData();
@@ -409,6 +420,85 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
     handlePermSetSubTabChange(event) {
         this.selectedPermSetSubTab = event.target.value;
+    }
+
+    // ---- Create Permission Set + full access editor ----
+
+    handleNewPermSetClick() {
+        this.pendingEditorTab = 'objects';
+        this.openCreatePsModal();
+    }
+
+    async openCreatePsModal() {
+        this.newPs = { label: '', apiName: '', licenseId: '', description: '' };
+        if (this.licenseOptions.length === 0) {
+            try {
+                this.licenseOptions = await getUserLicenseOptions();
+            } catch (error) {
+                this.showToast('Error', this.extractErrorMessage(error), 'error');
+            }
+        }
+        this.showCreatePsModal = true;
+    }
+
+    handleCloseCreatePsModal() {
+        this.showCreatePsModal = false;
+    }
+
+    handleNewPsFieldChange(event) {
+        const field = event.target.dataset.field;
+        const value = event.detail ? event.detail.value : event.target.value;
+        this.newPs = { ...this.newPs, [field]: value };
+    }
+
+    get createPsSaveDisabled() {
+        return !this.newPs.label || !this.newPs.label.trim();
+    }
+
+    async handleCreatePermSet() {
+        this.showCreatePsModal = false;
+        this.isLoading = true;
+        try {
+            const res = await createPermissionSet({
+                label: this.newPs.label,
+                apiName: this.newPs.apiName,
+                licenseId: this.newPs.licenseId || null,
+                description: this.newPs.description
+            });
+            this.showToast('Permission set created', res.message, 'success');
+            await this.loadPermissionSets();
+            // Open the full editor on the new set, focused on the chosen category.
+            this.openPermSetEditor(res.recordId, this.newPs.label.trim(), this.pendingEditorTab);
+        } catch (error) {
+            this.showToast('Could not create permission set', this.extractErrorMessage(error), 'error');
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    openPermSetEditor(id, label, initialTab) {
+        this.selectedPermSet = null;
+        this.editingPermSetId = id;
+        this.editingPermSetLabel = label;
+        this.editingPermSetInitialTab = initialTab || 'objects';
+    }
+
+    handleOpenPermSetEditor(event) {
+        this.openPermSetEditor(
+            event.currentTarget.dataset.id,
+            event.currentTarget.dataset.label,
+            event.currentTarget.dataset.tab || 'objects'
+        );
+    }
+
+    handleClosePermSetEditor() {
+        this.editingPermSetId = null;
+        this.editingPermSetLabel = '';
+        this.loadPermissionSets();
+    }
+
+    get isEditingPermSet() {
+        return Boolean(this.editingPermSetId);
     }
 
     handlePromptAssignUsersToPs() {
@@ -1046,7 +1136,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
     handleEditorAccessChange() {
         // Keep list counts and header stats current without blocking the editor
-        Promise.all([this.loadOverview(), this.loadUsers()]).catch(() => {});
+        Promise.all([this.loadOverview(), this.loadUsers(), this.loadPermissionSets()]).catch(() => {});
     }
 
     get assignableProfileOptions() {

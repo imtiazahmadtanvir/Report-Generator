@@ -448,6 +448,71 @@
                     </table>
                 </div>
             </template>
+
+            <!-- ======================================================= -->
+            <!-- PERMISSION SET: ASSIGNED USERS                           -->
+            <!-- ======================================================= -->
+            <template lwc:if={isPsUsersTab}>
+                <lightning-layout multiple-rows vertical-align="end" class="filter-bar">
+                    <lightning-layout-item size="12" medium-device-size="6" padding="horizontal-small">
+                        <lightning-input type="search" label="Search users" placeholder="Name, username or email" value={psUsersFilters.search} data-tab="psUsers" data-filter="search" onchange={handleFilterChange}></lightning-input>
+                    </lightning-layout-item>
+                    <lightning-layout-item size="12" medium-device-size="3" padding="horizontal-small">
+                        <lightning-combobox label="Assignment" value={psUsersFilters.access} options={assignedOptions} data-tab="psUsers" data-filter="access" onchange={handleFilterChange}></lightning-combobox>
+                    </lightning-layout-item>
+                </lightning-layout>
+                <p class="result-count">{psUsersView.summary}</p>
+
+                <div class="table-scroll">
+                    <table class="slds-table slds-table_cell-buffer slds-table_bordered resp-table" aria-label="Assigned users">
+                        <thead>
+                            <tr class="slds-line-height_reset">
+                                <th scope="col"><div class="slds-truncate">Name</div></th>
+                                <th scope="col"><div class="slds-truncate">Profile</div></th>
+                                <th scope="col"><div class="slds-truncate">Status</div></th>
+                                <th scope="col"><div class="slds-truncate">Assignment</div></th>
+                                <th scope="col" class="slds-text-align_right"><div class="slds-truncate">Actions</div></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template for:each={psUsersView.rows} for:item="row">
+                                <tr key={row.id}>
+                                    <th scope="row" data-label="Name">
+                                        <div class="slds-truncate cell-title" title={row.name}>{row.name}</div>
+                                        <div class="slds-truncate cell-sub" title={row.email}>{row.username}</div>
+                                    </th>
+                                    <td data-label="Profile"><div class="slds-truncate cell-sub">{row.profileName}</div></td>
+                                    <td data-label="Status"><span class={row.badgeClass}>{row.statusLabel}</span></td>
+                                    <td data-label="Assignment"><span class={row.badgeClass}>{row.assignedLabel}</span></td>
+                                    <td data-label="Actions" class="slds-text-align_right">
+                                        <div class="row-actions">
+                                            <template lwc:if={row.showAssign}>
+                                                <lightning-button label="Assign" icon-name="utility:add" variant="brand-outline"
+                                                    data-id={row.id} data-name={row.name} data-assign="true" onclick={handlePsUserAssignment}></lightning-button>
+                                            </template>
+                                            <template lwc:if={row.showRemove}>
+                                                <lightning-button label="Remove" icon-name="utility:dash" variant="destructive-text"
+                                                    data-id={row.id} data-name={row.name} data-assign="false" onclick={handlePsUserAssignment}></lightning-button>
+                                            </template>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                    <template lwc:if={psUsersView.isEmpty}>
+                        <div class="empty-state">
+                            <lightning-icon icon-name="utility:user" size="small" class="empty-state__icon"></lightning-icon>
+                            <p>No users match these filters.</p>
+                        </div>
+                    </template>
+                </div>
+                <template lwc:if={psUsersView.hasMore}>
+                    <div class="show-more">
+                        <lightning-button label="Show more" icon-name="utility:chevrondown" data-tab="psUsers" onclick={handleShowMore}></lightning-button>
+                    </div>
+                </template>
+            </template>
         </div>
 
         <!-- UNSAVED CHANGES -->
