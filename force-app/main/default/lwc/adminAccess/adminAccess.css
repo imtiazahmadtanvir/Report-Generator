@@ -171,7 +171,7 @@
   border: 1px solid #e2e8f0 !important;
   border-radius: var(--radius-md) !important;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
-  padding: 14px 20px !important;
+  padding: 16px 20px !important;
   margin-bottom: 1.25rem !important;
   width: 100% !important;
   box-sizing: border-box !important;
@@ -182,31 +182,38 @@
   width: 100% !important;
 }
 
-.detail-header .slds-page-header__row_gutters {
+.detail-header .slds-page-header__row_gutters,
+.detail-header .slds-page-header__col-details,
+.detail-header .slds-page-header__detail-row {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   width: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
 }
 
-.detail-header .slds-page-header__col-details {
-  width: 100% !important;
-  padding: 0 !important;
+.detail-header .slds-page-header__name-title h1,
+.detail-header .slds-page-header__name-title h1 span {
+  font-weight: 500 !important;
 }
 
 .detail-header .slds-page-header__name-title h1 span:first-child {
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #64748b;
-  display: block;
+  font-size: 0.6875rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: #64748b !important;
+  display: block !important;
+  margin-bottom: 2px !important;
 }
 
 .detail-header .slds-page-header__title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #0f172a;
-  line-height: 1.2;
+  font-size: 1.25rem !important;
+  font-weight: 500 !important;
+  color: #0f172a !important;
+  line-height: 1.25 !important;
 }
 
 .detail-header .detail-fields {
@@ -215,9 +222,10 @@
   align-items: stretch !important;
   justify-content: space-between !important;
   width: 100% !important;
-  border-top: 1px solid #f1f5f9;
-  margin-top: 12px;
-  padding-top: 10px;
+  background: transparent !important;
+  border-top: 1px solid #e2e8f0 !important;
+  margin-top: 14px !important;
+  padding-top: 12px !important;
   padding-left: 0 !important;
   list-style: none !important;
   gap: 16px;
@@ -228,13 +236,14 @@
   min-width: 0 !important;
   max-width: none !important;
   padding-right: 8px !important;
+  background: transparent !important;
 }
 
 .detail-header .detail-fields .slds-text-title {
   font-size: 0.6875rem !important;
   font-weight: 600 !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.04em !important;
+  letter-spacing: 0.05em !important;
   color: #64748b !important;
   margin-bottom: 3px !important;
   line-height: 1.2 !important;
@@ -242,8 +251,8 @@
 
 .detail-header .detail-fields .slds-truncate {
   font-size: 0.8125rem !important;
-  font-weight: 500 !important;
-  color: #0f172a !important;
+  font-weight: 400 !important;
+  color: #1e293b !important;
   line-height: 1.35 !important;
 }
 

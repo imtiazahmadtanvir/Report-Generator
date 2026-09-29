@@ -1184,8 +1184,7 @@ export default class AdminAccessEditor extends NavigationMixin(
       ...tab,
       selected: tab.value === this.activeTab,
       cssClass:
-        tab.value === this.activeTab ? "cat-pill cat-pill_active" : "cat-pill",
-      iconVariant: tab.value === this.activeTab ? "inverse" : ""
+        tab.value === this.activeTab ? "cat-pill cat-pill_active" : "cat-pill"
     }));
   }
 

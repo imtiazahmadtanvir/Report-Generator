@@ -75,7 +75,12 @@
   background: transparent;
   border-bottom: 2px solid #e2e8f0;
   overflow-x: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.cat-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .cat-pill {
@@ -102,20 +107,28 @@
   border-bottom-color: #cbd5e1;
 }
 
+.cat-pill:hover .cat-pill__icon {
+  --sds-c-icon-color-foreground-default: var(--brand-blue, #0176d3);
+  --slds-c-icon-color-foreground-default: var(--brand-blue, #0176d3);
+}
+
 .cat-pill_active {
   color: var(--brand-blue, #0176d3) !important;
-  font-weight: 700;
+  font-weight: 600 !important;
   border-bottom: 2px solid var(--brand-blue, #0176d3) !important;
   background: transparent !important;
   box-shadow: none !important;
 }
 
-.cat-pill_active .cat-pill__icon {
-  --slds-c-icon-color-foreground-default: var(--brand-blue, #0176d3);
+.cat-pill__icon {
+  --sds-c-icon-color-foreground-default: #64748b;
+  --slds-c-icon-color-foreground-default: #64748b;
+  transition: color 0.15s ease;
 }
 
-.cat-pill__icon {
-  --sds-c-icon-color-foreground-default: currentColor;
+.cat-pill_active .cat-pill__icon {
+  --sds-c-icon-color-foreground-default: var(--brand-blue, #0176d3) !important;
+  --slds-c-icon-color-foreground-default: var(--brand-blue, #0176d3) !important;
 }
 
 /* ---- Section Subbar ------------------------------------------------------ */
