@@ -220,32 +220,58 @@
                     <div class="slds-page-header__col-details">
                       <ul class="slds-page-header__detail-row detail-fields">
                         <li class="slds-page-header__detail-block">
-                          <div class="slds-text-title slds-truncate">
+                          <div
+                            class="slds-text-title slds-truncate"
+                            title="User License"
+                          >
                             User License
                           </div>
-                          <div class="slds-truncate">
+                          <div
+                            class="slds-truncate"
+                            title={selectedProfile.profile.userLicenseName}
+                          >
                             {selectedProfile.profile.userLicenseName}
                           </div>
                         </li>
                         <li class="slds-page-header__detail-block">
-                          <div class="slds-text-title slds-truncate">
+                          <div
+                            class="slds-text-title slds-truncate"
+                            title="User Type"
+                          >
                             User Type
                           </div>
-                          <div class="slds-truncate">
+                          <div
+                            class="slds-truncate"
+                            title={selectedProfile.profile.userType}
+                          >
                             {selectedProfile.profile.userType}
                           </div>
                         </li>
                         <li class="slds-page-header__detail-block">
-                          <div class="slds-text-title slds-truncate">Users</div>
-                          <div class="slds-truncate">
+                          <div
+                            class="slds-text-title slds-truncate"
+                            title="Users"
+                          >
+                            Users
+                          </div>
+                          <div
+                            class="slds-truncate"
+                            title={selectedProfile.profile.userCount}
+                          >
                             {selectedProfile.profile.userCount}
                           </div>
                         </li>
                         <li class="slds-page-header__detail-block">
-                          <div class="slds-text-title slds-truncate">
+                          <div
+                            class="slds-text-title slds-truncate"
+                            title="Created"
+                          >
                             Created
                           </div>
-                          <div class="slds-truncate">
+                          <div
+                            class="slds-truncate"
+                            title={selectedProfile.profile.createdDateFormatted}
+                          >
                             {selectedProfile.profile.createdDateFormatted}
                           </div>
                         </li>
@@ -432,24 +458,38 @@
                             Profile
                           </div>
                           <button
-                            class="slds-button"
+                            class="slds-button slds-truncate"
                             onclick={handleOpenUserProfile}
-                            title="Manage access for this profile"
+                            title={selectedUser.user.profileName}
                           >
                             {selectedUser.user.profileName}
                           </button>
                         </li>
                         <li class="slds-page-header__detail-block">
-                          <div class="slds-text-title slds-truncate">Role</div>
-                          <div class="slds-truncate">
+                          <div
+                            class="slds-text-title slds-truncate"
+                            title="Role"
+                          >
+                            Role
+                          </div>
+                          <div
+                            class="slds-truncate"
+                            title={selectedUser.user.roleName}
+                          >
                             {selectedUser.user.roleName}
                           </div>
                         </li>
                         <li class="slds-page-header__detail-block">
-                          <div class="slds-text-title slds-truncate">
+                          <div
+                            class="slds-text-title slds-truncate"
+                            title="Last Login"
+                          >
                             Last Login
                           </div>
-                          <div class="slds-truncate">
+                          <div
+                            class="slds-truncate"
+                            title={selectedUser.user.lastLoginFormatted}
+                          >
                             {selectedUser.user.lastLoginFormatted}
                           </div>
                         </li>
