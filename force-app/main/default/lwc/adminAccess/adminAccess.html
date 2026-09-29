@@ -110,62 +110,57 @@
           <!-- TAB 1: USER & PROFILE (TOGGLE: PROFILE / USER)               -->
           <!-- ---------------------------------------------------------- -->
           <template lwc:if={isUserAndProfileTab}>
-            <!-- SUB-NAVIGATION TOGGLE BAR -->
-            <div class="user-profile-subnav-container">
-              <div
-                class="user-profile-toggle-group"
-                role="tablist"
-                aria-label="User and Profile Views"
-              >
-                <button
-                  type="button"
-                  class={profileSubTabClass}
-                  data-subtab="profile"
-                  onclick={handleSubTabToggle}
-                  role="tab"
-                  aria-selected={isProfileSubActive}
-                  title="Switch to Profiles View"
+            <!-- SUB-NAVIGATION TOGGLE BAR (Visible on List Views only) -->
+            <template lwc:if={showSubNavToggle}>
+              <div class="user-profile-subnav-container">
+                <div
+                  class="user-profile-toggle-group"
+                  role="tablist"
+                  aria-label="User and Profile Views"
                 >
-                  <lightning-icon
-                    icon-name="utility:identity"
-                    size="x-small"
-                    variant={profileIconVariant}
-                    class="toggle-icon"
-                  ></lightning-icon>
-                  <span class="toggle-text">Profile</span>
-                  <span class={profileCountBadgeClass}
-                    >{overview.totalProfiles}</span
+                  <button
+                    type="button"
+                    class={profileSubTabClass}
+                    data-subtab="profile"
+                    onclick={handleSubTabToggle}
+                    role="tab"
+                    aria-selected={isProfileSubActive}
+                    title="Switch to Profiles View"
                   >
-                </button>
-                <button
-                  type="button"
-                  class={userSubTabClass}
-                  data-subtab="user"
-                  onclick={handleSubTabToggle}
-                  role="tab"
-                  aria-selected={isUserSubActive}
-                  title="Switch to Users View"
-                >
-                  <lightning-icon
-                    icon-name="utility:user"
-                    size="x-small"
-                    variant={userIconVariant}
-                    class="toggle-icon"
-                  ></lightning-icon>
-                  <span class="toggle-text">User</span>
-                  <span class={userCountBadgeClass}>{overview.totalUsers}</span>
-                </button>
+                    <lightning-icon
+                      icon-name="utility:identity"
+                      size="x-small"
+                      variant={profileIconVariant}
+                      class="toggle-icon"
+                    ></lightning-icon>
+                    <span class="toggle-text">Profile</span>
+                    <span class={profileCountBadgeClass}
+                      >{overview.totalProfiles}</span
+                    >
+                  </button>
+                  <button
+                    type="button"
+                    class={userSubTabClass}
+                    data-subtab="user"
+                    onclick={handleSubTabToggle}
+                    role="tab"
+                    aria-selected={isUserSubActive}
+                    title="Switch to Users View"
+                  >
+                    <lightning-icon
+                      icon-name="utility:user"
+                      size="x-small"
+                      variant={userIconVariant}
+                      class="toggle-icon"
+                    ></lightning-icon>
+                    <span class="toggle-text">User</span>
+                    <span class={userCountBadgeClass}
+                      >{overview.totalUsers}</span
+                    >
+                  </button>
+                </div>
               </div>
-              <div class="user-profile-subnav-meta">
-                <lightning-icon
-                  icon-name="utility:info_alt"
-                  size="xx-small"
-                ></lightning-icon>
-                <span
-                  >Managing <strong>{activeSubTabLabel}</strong> Access</span
-                >
-              </div>
-            </div>
+            </template>
 
             <!-- SUB-VIEW 1: PROFILES (DEFAULT) -->
             <template lwc:if={isProfileSubActive}>

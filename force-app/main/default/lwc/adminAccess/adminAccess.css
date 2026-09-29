@@ -50,13 +50,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
+  gap: 16px;
   background: #ffffff;
-  padding: 14px 24px;
-  border-bottom: 1px solid #e5e5e5;
+  padding: 12px 24px;
+  border-bottom: 1px solid #e2e8f0;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  /* Keep the console header pinned while the content scrolls */
   position: sticky;
   top: 0;
   z-index: 20;
@@ -65,8 +63,8 @@
 .ch-title {
   display: flex;
   align-items: center;
-  gap: 14px;
-  min-width: 230px;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .ch-icon {
@@ -74,52 +72,61 @@
 }
 
 .ch-eyebrow {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  color: #747474;
+  color: #64748b;
   margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .ch-title-main {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: 700;
-  color: #181818;
-  line-height: 1.1;
+  color: #0f172a;
+  line-height: 1.15;
   margin: 1px 0 2px;
 }
 
 .ch-meta {
-  font-size: 0.8rem;
-  color: #747474;
+  font-size: 0.78rem;
+  color: #64748b;
   margin: 0;
 }
 
 /* Grouped stats cluster in the middle */
 .ch-stats {
   display: flex;
-  align-items: stretch;
-  flex-wrap: wrap;
-  background: #ffffff;
-  border: 1px solid #e5e5e5;
-  border-radius: 10px;
-  padding: 4px 2px;
+  align-items: center;
+  flex-wrap: nowrap;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 3px 4px;
   flex: 0 1 auto;
-  justify-content: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ch-stats::-webkit-scrollbar {
+  display: none;
 }
 
 .ch-stat {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 1px;
-  padding: 6px 18px;
+  padding: 4px 14px;
   background: none;
   border: 0;
-  border-right: 1px solid #eef1f4;
+  border-right: 1px solid #e2e8f0;
   cursor: pointer;
-  text-align: left;
+  text-align: center;
   color: inherit;
   font-family: inherit;
+  white-space: nowrap;
+  transition: all 0.15s ease;
 }
 
 .ch-stat:last-child {
@@ -128,27 +135,30 @@
 
 .ch-stat:hover,
 .ch-stat:focus {
-  background: #f7f9fb;
+  background: #ffffff;
   border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
 .ch-stat-label {
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 600;
-  color: #747474;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   white-space: nowrap;
 }
 
 .ch-stat-number {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 700;
-  color: #181818;
-  line-height: 1.15;
+  color: #0f172a;
+  line-height: 1.1;
 }
 
 .ch-stat-meta {
-  font-size: 0.68rem;
-  color: #9a9a9a;
+  font-size: 0.65rem;
+  color: #94a3b8;
   white-space: nowrap;
 }
 
@@ -157,7 +167,43 @@
 }
 
 .detail-header {
-  margin-bottom: 1rem;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+  padding: 16px 20px !important;
+  margin-bottom: 1.25rem !important;
+}
+
+.detail-header .slds-page-header__row {
+  margin-bottom: 0;
+}
+
+.detail-header .slds-page-header__title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.detail-header .detail-fields {
+  border-top: 1px solid #f1f5f9;
+  margin-top: 14px;
+  padding-top: 12px;
+}
+
+.detail-header .detail-fields .slds-text-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.detail-header .detail-fields .slds-truncate {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1e293b;
 }
 
 @media (max-width: 47.9375em) {
@@ -836,13 +882,10 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  gap: 12px;
-  padding: 12px 18px;
-  margin-bottom: 20px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: var(--radius-md);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  margin-bottom: 1.25rem;
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 
 .user-profile-toggle-group {

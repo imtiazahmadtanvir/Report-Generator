@@ -1376,6 +1376,10 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
       : "subnav-toggle-badge";
   }
 
+  get showSubNavToggle() {
+    return !this.selectedProfile && !this.selectedUser;
+  }
+
   get activeSubTabLabel() {
     return this.isProfileSubActive ? "Profiles" : "Users";
   }
