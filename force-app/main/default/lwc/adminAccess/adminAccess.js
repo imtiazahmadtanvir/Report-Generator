@@ -30,6 +30,10 @@ import toggleUserActiveStatus from '@salesforce/apex/AdminAccessController.toggl
 import changeUserProfile from '@salesforce/apex/AdminAccessEditorController.changeUserProfile';
 import createPermissionSet from '@salesforce/apex/AdminAccessEditorController.createPermissionSet';
 import getUserLicenseOptions from '@salesforce/apex/AdminAccessEditorController.getUserLicenseOptions';
+import createUser from '@salesforce/apex/AdminAccessController.createUser';
+import createPermissionSetGroup from '@salesforce/apex/AdminAccessController.createPermissionSetGroup';
+import addPermissionSetsToGroup from '@salesforce/apex/AdminAccessController.addPermissionSetsToGroup';
+import removePermissionSetFromGroup from '@salesforce/apex/AdminAccessController.removePermissionSetFromGroup';
 
 export default class AdminAccess extends NavigationMixin(LightningElement) {
     @track isLoading = false;
@@ -150,6 +154,14 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     @track editingPermSetLabel = '';
     @track editingPermSetInitialTab = 'objects';
     pendingEditorTab = 'objects';
+
+    // CREATE PERMISSION SET GROUP
+    @track showCreatePsgModal = false;
+    @track newPsg = { masterLabel: '', developerName: '', description: '' };
+
+    // CREATE USER
+    @track showCreateUserModal = false;
+    @track newUser = { firstName: '', lastName: '', email: '', username: '', alias: '', profileId: '' };
 
     connectedCallback() {
         this.loadInitialData();
@@ -377,6 +389,51 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
         this.showConfirmModal = true;
     }
 
+    // ---- Create User ----
+
+    handleNewUserClick() {
+        this.newUser = { firstName: '', lastName: '', email: '', username: '', alias: '', profileId: '' };
+        this.showCreateUserModal = true;
+    }
+
+    handleCloseCreateUserModal() {
+        this.showCreateUserModal = false;
+    }
+
+    handleNewUserFieldChange(event) {
+        const field = event.target.dataset.field;
+        const value = event.detail ? event.detail.value : event.target.value;
+        this.newUser = { ...this.newUser, [field]: value };
+    }
+
+    get createUserSaveDisabled() {
+        const u = this.newUser;
+        return !u.lastName || !u.lastName.trim() || !u.email || !u.email.trim() || !u.profileId;
+    }
+
+    async handleCreateUser() {
+        this.showCreateUserModal = false;
+        this.isLoading = true;
+        try {
+            const res = await createUser({
+                firstName: this.newUser.firstName,
+                lastName: this.newUser.lastName,
+                email: this.newUser.email,
+                username: this.newUser.username,
+                alias: this.newUser.alias,
+                profileId: this.newUser.profileId
+            });
+            this.showToast('User created', res.message, 'success');
+            await Promise.all([this.loadUsers(), this.loadOverview()]);
+            // Open the new user's detail view so their access can be configured.
+            await this.viewUserDetailById(res.recordId);
+        } catch (error) {
+            this.showToast('Could not create user', this.extractErrorMessage(error), 'error');
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
     // =========================================================================
     // SECTION 2: PERMISSION SETS
     // =========================================================================
@@ -601,6 +658,74 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
         this.confirmTargetName = this.selectedGroup.groupSummary.masterLabel;
         this.confirmActionType = 'removeUserFromGroup';
         this.confirmPayload = { groupId: this.selectedGroup.groupSummary.id, userId };
+        this.showConfirmModal = true;
+    }
+
+    // ---- Create Permission Set Group + component management ----
+
+    handleNewPsgClick() {
+        this.newPsg = { masterLabel: '', developerName: '', description: '' };
+        this.showCreatePsgModal = true;
+    }
+
+    handleCloseCreatePsgModal() {
+        this.showCreatePsgModal = false;
+    }
+
+    handleNewPsgFieldChange(event) {
+        const field = event.target.dataset.field;
+        const value = event.detail ? event.detail.value : event.target.value;
+        this.newPsg = { ...this.newPsg, [field]: value };
+    }
+
+    get createPsgSaveDisabled() {
+        return !this.newPsg.masterLabel || !this.newPsg.masterLabel.trim();
+    }
+
+    async handleCreatePermSetGroup() {
+        this.showCreatePsgModal = false;
+        this.isLoading = true;
+        try {
+            const res = await createPermissionSetGroup({
+                masterLabel: this.newPsg.masterLabel,
+                developerName: this.newPsg.developerName,
+                description: this.newPsg.description
+            });
+            this.showToast('Permission set group created', res.message, 'success');
+            await this.loadGroups();
+            // Open the new group's detail view so components and users can be added.
+            await this.viewGroupDetailById(res.recordId);
+        } catch (error) {
+            this.showToast('Could not create group', this.extractErrorMessage(error), 'error');
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    handlePromptAddPermSetsToGroup() {
+        this.assignModalTitle = `Add Permission Sets to ${this.selectedGroup.groupSummary.masterLabel}`;
+        this.assignModalType = 'addPermSetsToGroup';
+        this.assignSearchTerm = '';
+        this.assignItems = (this.selectedGroup.availablePermissionSets || []).map(ps => ({
+            id: ps.id,
+            title: ps.label,
+            subtitle: `${ps.name} • License: ${ps.licenseName}`,
+            selected: false,
+            rowClass: 'selectable-row'
+        }));
+        this.selectedAssignIds = [];
+        this.showAssignModal = true;
+    }
+
+    handlePromptRemovePermSetFromGroup(event) {
+        const permSetId = event.currentTarget.dataset.id;
+        const permSetName = event.currentTarget.dataset.name;
+        this.confirmTitle = 'Remove Permission Set from Group';
+        this.confirmMessage = `Remove "${permSetName}" from group "${this.selectedGroup.groupSummary.masterLabel}"? Users of the group lose the access it provides.`;
+        this.confirmItemName = permSetName;
+        this.confirmTargetName = this.selectedGroup.groupSummary.masterLabel;
+        this.confirmActionType = 'removePermSetFromGroup';
+        this.confirmPayload = { groupId: this.selectedGroup.groupSummary.id, permSetId };
         this.showConfirmModal = true;
     }
 
@@ -891,6 +1016,15 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
                     this.showToast('Success', res.message, 'success');
                     await this.viewGroupDetailById(this.confirmPayload.groupId);
                     break;
+
+                case 'removePermSetFromGroup':
+                    res = await removePermissionSetFromGroup({
+                        groupId: this.confirmPayload.groupId,
+                        permissionSetId: this.confirmPayload.permSetId
+                    });
+                    this.showToast('Success', res.message, 'success');
+                    await this.viewGroupDetailById(this.confirmPayload.groupId);
+                    break;
             }
         } catch (error) {
             this.showToast('Action Failed', this.extractErrorMessage(error), 'error');
@@ -963,6 +1097,15 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
                     res = await assignUsersToPermissionSetGroup({
                         permissionSetGroupId: this.selectedGroup.groupSummary.id,
                         userIds: this.selectedAssignIds
+                    });
+                    this.showToast('Success', res.message, 'success');
+                    await this.viewGroupDetailById(this.selectedGroup.groupSummary.id);
+                    break;
+
+                case 'addPermSetsToGroup':
+                    res = await addPermissionSetsToGroup({
+                        groupId: this.selectedGroup.groupSummary.id,
+                        permissionSetIds: this.selectedAssignIds
                     });
                     this.showToast('Success', res.message, 'success');
                     await this.viewGroupDetailById(this.selectedGroup.groupSummary.id);
@@ -1074,6 +1217,10 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
     get hasGroupAssignedUsers() {
         return Boolean(this.selectedGroup?.assignedUsers?.length);
+    }
+
+    get hasGroupIncludedSets() {
+        return Boolean(this.selectedGroup?.includedPermissionSets?.length);
     }
 
     get hasObjPermItems() {

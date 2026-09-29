@@ -102,6 +102,7 @@ public with sharing class AdminSecurityDataModel {
     public class PermissionSetGroupDetail {
         @AuraEnabled public PermissionSetGroupSummary groupSummary { get; set; }
         @AuraEnabled public List<PermissionSetSummary> includedPermissionSets { get; set; }
+        @AuraEnabled public List<PermissionSetSummary> availablePermissionSets { get; set; }
         @AuraEnabled public List<AdminUserInfo> assignedUsers { get; set; }
         @AuraEnabled public List<AdminUserInfo> availableUsers { get; set; }
     }

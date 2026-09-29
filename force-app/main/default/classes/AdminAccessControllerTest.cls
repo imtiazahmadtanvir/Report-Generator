@@ -260,4 +260,79 @@ private class AdminAccessControllerTest {
         }
         Test.stopTest();
     }
+
+    @isTest
+    static void testCreateGroupAndManageComponents() {
+        Id psId = [SELECT Id FROM PermissionSet WHERE Name = 'Test_Admin_Custom_PS' LIMIT 1].Id;
+
+        Test.startTest();
+        AdminSecurityDataModel.DmlResult created = AdminAccessController.createPermissionSetGroup('AAC Test Group', '', 'Created by test');
+        Assert.isTrue(created.success, 'Group creation should succeed');
+        Assert.isNotNull(created.recordId, 'A new group id should be returned');
+        Id groupId = created.recordId;
+
+        // The new group offers the custom set as available and has none included yet.
+        AdminSecurityDataModel.PermissionSetGroupDetail before = AdminAccessController.getPermissionSetGroupDetail(groupId);
+        Assert.areEqual(0, before.includedPermissionSets.size(), 'A new group has no components');
+        Boolean offered = false;
+        for (AdminSecurityDataModel.PermissionSetSummary ps : before.availablePermissionSets) {
+            if (ps.id == psId) {
+                offered = true;
+            }
+        }
+        Assert.isTrue(offered, 'The custom permission set should be available to add');
+
+        AdminSecurityDataModel.DmlResult added = AdminAccessController.addPermissionSetsToGroup(groupId, new List<Id>{ psId });
+        AdminSecurityDataModel.DmlResult removed = AdminAccessController.removePermissionSetFromGroup(groupId, psId);
+        Test.stopTest();
+
+        Assert.isTrue(added.success, 'Adding a permission set to the group should succeed');
+        Assert.isTrue(removed.success, 'Removing a permission set from the group should succeed');
+        Assert.areEqual(0, [SELECT count() FROM PermissionSetGroupComponent WHERE PermissionSetGroupId = :groupId AND PermissionSetId = :psId],
+            'Component should be removed');
+    }
+
+    @isTest
+    static void testCreateUser() {
+        Id profileId = [SELECT Id FROM Profile WHERE UserType = 'Standard' LIMIT 1].Id;
+        String uname = 'aac.newuser.' + DateTime.now().getTime() + '@example.com.invalid';
+
+        Test.startTest();
+        AdminSecurityDataModel.DmlResult res = AdminAccessController.createUser('AAC', 'Tester', 'aac.tester@example.com', uname, '', profileId);
+        Test.stopTest();
+
+        Assert.isTrue(res.success, 'User creation should succeed');
+        Assert.isNotNull(res.recordId, 'A new user id should be returned');
+        User created = [SELECT Id, Alias, IsActive FROM User WHERE Id = :res.recordId];
+        Assert.isTrue(created.IsActive, 'New user should be active');
+        Assert.areEqual('ATester', created.Alias, 'Alias should derive from first initial + last name');
+    }
+
+    @isTest
+    static void testCreateUserGuards() {
+        Integer failures = 0;
+        Id profileId = [SELECT Id FROM Profile WHERE UserType = 'Standard' LIMIT 1].Id;
+
+        Test.startTest();
+        try { AdminAccessController.createUser('A', '', 'e@example.com', 'u1@example.com.invalid', '', profileId); } catch (AuraHandledException ex) { failures++; }
+        try { AdminAccessController.createUser('A', 'B', '', 'u2@example.com.invalid', '', profileId); } catch (AuraHandledException ex) { failures++; }
+        try { AdminAccessController.createUser('A', 'B', 'e@example.com', 'u3@example.com.invalid', '', null); } catch (AuraHandledException ex) { failures++; }
+        Test.stopTest();
+
+        Assert.areEqual(3, failures, 'Invalid user create requests should raise AuraHandledException');
+    }
+
+    @isTest
+    static void testCreateGroupGuards() {
+        Integer failures = 0;
+        Test.startTest();
+        try { AdminAccessController.createPermissionSetGroup('', '', null); } catch (AuraHandledException ex) { failures++; }
+        AdminAccessController.createPermissionSetGroup('AAC Dup Group', 'AAC_Dup_Group', null);
+        try { AdminAccessController.createPermissionSetGroup('AAC Dup Group 2', 'AAC_Dup_Group', null); } catch (AuraHandledException ex) { failures++; }
+        try { AdminAccessController.addPermissionSetsToGroup(null, new List<Id>()); } catch (AuraHandledException ex) { failures++; }
+        try { AdminAccessController.removePermissionSetFromGroup(null, null); } catch (AuraHandledException ex) { failures++; }
+        Test.stopTest();
+
+        Assert.areEqual(4, failures, 'Invalid group create/component requests should raise AuraHandledException');
+    }
 }

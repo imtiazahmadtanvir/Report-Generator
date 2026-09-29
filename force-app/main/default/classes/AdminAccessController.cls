@@ -266,4 +266,40 @@ public with sharing class AdminAccessController {
             throw new AuraHandledException(ex.getMessage());
         }
     }
+
+    @AuraEnabled
+    public static AdminSecurityDataModel.DmlResult createPermissionSetGroup(String masterLabel, String developerName, String description) {
+        try {
+            return AdminSecurityService.createPermissionSetGroup(masterLabel, developerName, description);
+        } catch (Exception ex) {
+            throw new AuraHandledException(ex.getMessage());
+        }
+    }
+
+    @AuraEnabled
+    public static AdminSecurityDataModel.DmlResult addPermissionSetsToGroup(Id groupId, List<Id> permissionSetIds) {
+        try {
+            return AdminSecurityService.addPermissionSetsToGroup(groupId, permissionSetIds);
+        } catch (Exception ex) {
+            throw new AuraHandledException(ex.getMessage());
+        }
+    }
+
+    @AuraEnabled
+    public static AdminSecurityDataModel.DmlResult removePermissionSetFromGroup(Id groupId, Id permissionSetId) {
+        try {
+            return AdminSecurityService.removePermissionSetFromGroup(groupId, permissionSetId);
+        } catch (Exception ex) {
+            throw new AuraHandledException(ex.getMessage());
+        }
+    }
+
+    @AuraEnabled
+    public static AdminSecurityDataModel.DmlResult createUser(String firstName, String lastName, String email, String username, String alias, Id profileId) {
+        try {
+            return AdminSecurityService.createUser(firstName, lastName, email, username, alias, profileId);
+        } catch (Exception ex) {
+            throw new AuraHandledException(ex.getMessage());
+        }
+    }
 }

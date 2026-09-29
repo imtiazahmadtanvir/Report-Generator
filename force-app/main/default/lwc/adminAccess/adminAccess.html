@@ -189,9 +189,15 @@
                                 </div>
                             </div>
                             <div class="toolbar-actions">
-                                <span class="slds-text-body_small slds-text-color_weak">
+                                <span class="slds-text-body_small slds-text-color_weak slds-m-right_small">
                                     Showing {usersList.length} User(s)
                                 </span>
+                                <lightning-button
+                                    label="New User"
+                                    icon-name="utility:add"
+                                    variant="brand"
+                                    onclick={handleNewUserClick}
+                                ></lightning-button>
                             </div>
                         </div>
 
@@ -643,25 +649,60 @@
                         <!-- GROUP SUB-TABS -->
                         <lightning-tabset variant="scoped" active-tab-value={selectedGroupSubTab} onselect={handleGroupSubTabChange}>
                             <lightning-tab label="Included Permission Sets" value="permSets" icon-name="standard:user_role">
+                                <div class="section-toolbar">
+                                    <div class="toolbar-filters">
+                                        <span class="slds-text-heading_small slds-m-right_medium">
+                                            Included Sets <span class="badge-count">{selectedGroup.groupSummary.componentCount}</span>
+                                        </span>
+                                    </div>
+                                    <div class="toolbar-actions">
+                                        <lightning-button
+                                            label="+ Add Permission Sets"
+                                            icon-name="utility:add"
+                                            variant="brand"
+                                            onclick={handlePromptAddPermSetsToGroup}
+                                        ></lightning-button>
+                                    </div>
+                                </div>
+
                                 <div class="styled-table-container">
-                                    <table class="custom-data-table resp-list">
+                                    <table class="custom-data-table resp-list simple-list">
                                         <thead>
                                             <tr>
-                                                <th>Permission Set Label</th>
-                                                <th>API Name</th>
+                                                <th>Permission Set</th>
                                                 <th>Type</th>
                                                 <th>License</th>
-                                                <th>Description</th>
+                                                <th class="slds-text-align_right">Action</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <template for:each={selectedGroup.includedPermissionSets} for:item="ps">
-                                                <tr key={ps.id}>
-                                                    <td data-label="Permission Set Label"><strong>{ps.label}</strong></td>
-                                                    <td data-label="API Name"><code>{ps.name}</code></td>
-                                                    <td data-label="Type"><span class={ps.typeClass}>{ps.typeBadge}</span></td>
-                                                    <td data-label="License">{ps.licenseName}</td>
-                                                    <td data-label="Description">{ps.description}</td>
+                                            <template lwc:if={hasGroupIncludedSets}>
+                                                <template for:each={selectedGroup.includedPermissionSets} for:item="ps">
+                                                    <tr key={ps.id}>
+                                                        <td data-label="Permission Set">
+                                                            <div class="cell-title">{ps.label}</div>
+                                                            <div class="cell-sub"><code>{ps.name}</code></div>
+                                                        </td>
+                                                        <td data-label="Type"><span class={ps.typeClass}>{ps.typeBadge}</span></td>
+                                                        <td data-label="License"><div class="cell-clip-line" title={ps.licenseName}>{ps.licenseName}</div></td>
+                                                        <td data-label="Action" class="slds-text-align_right">
+                                                            <lightning-button-icon
+                                                                icon-name="utility:delete"
+                                                                alternative-text="Remove Permission Set"
+                                                                variant="border-filled"
+                                                                data-id={ps.id}
+                                                                data-name={ps.label}
+                                                                onclick={handlePromptRemovePermSetFromGroup}
+                                                            ></lightning-button-icon>
+                                                        </td>
+                                                    </tr>
+                                                </template>
+                                            </template>
+                                            <template lwc:else>
+                                                <tr>
+                                                    <td colspan="4" class="slds-text-align_center slds-p-around_large slds-text-color_weak">
+                                                        No permission sets in this group yet. Use "Add Permission Sets" to include some.
+                                                    </td>
                                                 </tr>
                                             </template>
                                         </tbody>
@@ -759,9 +800,15 @@
                                 </div>
                             </div>
                             <div class="toolbar-actions">
-                                <span class="slds-text-body_small slds-text-color_weak">
+                                <span class="slds-text-body_small slds-text-color_weak slds-m-right_small">
                                     Showing {groupsList.length} Group(s)
                                 </span>
+                                <lightning-button
+                                    label="New Permission Set Group"
+                                    icon-name="utility:add"
+                                    variant="brand"
+                                    onclick={handleNewPsgClick}
+                                ></lightning-button>
                             </div>
                         </div>
 
@@ -1301,6 +1348,149 @@
                             class="slds-m-left_x-small"
                             onclick={handleCreatePermSet}
                             disabled={createPsSaveDisabled}
+                        ></lightning-button>
+                    </div>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+        </template>
+
+        <!-- ============================================================== -->
+        <!-- CREATE USER MODAL                                              -->
+        <!-- ============================================================== -->
+        <template lwc:if={showCreateUserModal}>
+            <section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="create-user-heading" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <div class="slds-modal__header">
+                        <h1 id="create-user-heading" class="slds-modal__title slds-hyphenate">New User</h1>
+                    </div>
+                    <div class="slds-modal__content slds-p-around_medium">
+                        <p class="slds-m-bottom_small slds-text-body_small slds-text-color_weak">
+                            Create an active user. Locale, time zone and language default from your settings. After creating, their access editor opens.
+                        </p>
+                        <div class="slds-grid slds-wrap slds-gutters">
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-input
+                                    label="First Name"
+                                    value={newUser.firstName}
+                                    data-field="firstName"
+                                    onchange={handleNewUserFieldChange}
+                                    class="slds-m-bottom_small"
+                                ></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-input
+                                    label="Last Name"
+                                    required
+                                    value={newUser.lastName}
+                                    data-field="lastName"
+                                    onchange={handleNewUserFieldChange}
+                                    class="slds-m-bottom_small"
+                                ></lightning-input>
+                            </div>
+                        </div>
+                        <lightning-input
+                            label="Email"
+                            type="email"
+                            required
+                            value={newUser.email}
+                            data-field="email"
+                            onchange={handleNewUserFieldChange}
+                            class="slds-m-bottom_small"
+                        ></lightning-input>
+                        <lightning-input
+                            label="Username"
+                            placeholder="Leave blank to use the email address"
+                            value={newUser.username}
+                            data-field="username"
+                            onchange={handleNewUserFieldChange}
+                            class="slds-m-bottom_small"
+                        ></lightning-input>
+                        <div class="slds-grid slds-wrap slds-gutters">
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-input
+                                    label="Alias"
+                                    placeholder="Auto if blank"
+                                    max-length="8"
+                                    value={newUser.alias}
+                                    data-field="alias"
+                                    onchange={handleNewUserFieldChange}
+                                    class="slds-m-bottom_small"
+                                ></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-combobox
+                                    label="Profile"
+                                    required
+                                    value={newUser.profileId}
+                                    options={assignableProfileOptions}
+                                    placeholder="Select a profile"
+                                    data-field="profileId"
+                                    onchange={handleNewUserFieldChange}
+                                    class="slds-m-bottom_small"
+                                ></lightning-combobox>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-modal__footer">
+                        <lightning-button label="Cancel" onclick={handleCloseCreateUserModal}></lightning-button>
+                        <lightning-button
+                            label="Create & Configure"
+                            variant="brand"
+                            class="slds-m-left_x-small"
+                            onclick={handleCreateUser}
+                            disabled={createUserSaveDisabled}
+                        ></lightning-button>
+                    </div>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+        </template>
+
+        <!-- ============================================================== -->
+        <!-- CREATE PERMISSION SET GROUP MODAL                              -->
+        <!-- ============================================================== -->
+        <template lwc:if={showCreatePsgModal}>
+            <section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="create-psg-heading" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <div class="slds-modal__header">
+                        <h1 id="create-psg-heading" class="slds-modal__title slds-hyphenate">New Permission Set Group</h1>
+                    </div>
+                    <div class="slds-modal__content slds-p-around_medium">
+                        <p class="slds-m-bottom_small slds-text-body_small slds-text-color_weak">
+                            Create the group, then add component permission sets and assign users from the group's detail view.
+                        </p>
+                        <lightning-input
+                            label="Label"
+                            required
+                            value={newPsg.masterLabel}
+                            data-field="masterLabel"
+                            onchange={handleNewPsgFieldChange}
+                            class="slds-m-bottom_small"
+                        ></lightning-input>
+                        <lightning-input
+                            label="Developer Name"
+                            placeholder="Leave blank to derive from the label"
+                            value={newPsg.developerName}
+                            data-field="developerName"
+                            onchange={handleNewPsgFieldChange}
+                            class="slds-m-bottom_small"
+                        ></lightning-input>
+                        <lightning-textarea
+                            label="Description"
+                            value={newPsg.description}
+                            data-field="description"
+                            onchange={handleNewPsgFieldChange}
+                        ></lightning-textarea>
+                    </div>
+                    <div class="slds-modal__footer">
+                        <lightning-button label="Cancel" onclick={handleCloseCreatePsgModal}></lightning-button>
+                        <lightning-button
+                            label="Create & Configure"
+                            variant="brand"
+                            class="slds-m-left_x-small"
+                            onclick={handleCreatePermSetGroup}
+                            disabled={createPsgSaveDisabled}
                         ></lightning-button>
                     </div>
                 </div>

@@ -679,7 +679,9 @@ public with sharing class AdminSecurityService {
         ];
 
         List<AdminSecurityDataModel.PermissionSetSummary> includedSets = new List<AdminSecurityDataModel.PermissionSetSummary>();
+        Set<Id> includedIds = new Set<Id>();
         for (PermissionSetGroupComponent comp : components) {
+            includedIds.add(comp.PermissionSetId);
             AdminSecurityDataModel.PermissionSetSummary ps = new AdminSecurityDataModel.PermissionSetSummary();
             ps.id = comp.PermissionSetId;
             ps.name = comp.PermissionSet.Name;
@@ -691,6 +693,26 @@ public with sharing class AdminSecurityService {
             includedSets.add(ps);
         }
         summary.componentCount = includedSets.size();
+
+        // Permission sets that can still be added to the group.
+        List<AdminSecurityDataModel.PermissionSetSummary> availableSets = new List<AdminSecurityDataModel.PermissionSetSummary>();
+        for (PermissionSet ps : [
+            SELECT Id, Name, Label, Description, License.Name, IsCustom
+            FROM PermissionSet
+            WHERE IsOwnedByProfile = false AND PermissionSetGroupId = null AND Id NOT IN :includedIds
+            ORDER BY Label ASC
+            LIMIT 500
+        ]) {
+            AdminSecurityDataModel.PermissionSetSummary dto = new AdminSecurityDataModel.PermissionSetSummary();
+            dto.id = ps.Id;
+            dto.name = ps.Name;
+            dto.label = ps.Label;
+            dto.description = ps.Description;
+            dto.licenseName = ps.License != null ? ps.License.Name : 'None';
+            dto.isCustom = ps.IsCustom;
+            dto.typeBadge = ps.IsCustom ? 'Custom' : 'Standard';
+            availableSets.add(dto);
+        }
 
         // Assigned users
         List<PermissionSetAssignment> psaList = [
@@ -741,10 +763,104 @@ public with sharing class AdminSecurityService {
         AdminSecurityDataModel.PermissionSetGroupDetail detail = new AdminSecurityDataModel.PermissionSetGroupDetail();
         detail.groupSummary = summary;
         detail.includedPermissionSets = includedSets;
+        detail.availablePermissionSets = availableSets;
         detail.assignedUsers = assignedUsers;
         detail.availableUsers = availableUsers;
 
         return detail;
+    }
+
+    /**
+     * @description Create a new, empty permission set group. Component permission sets and user
+     * assignments are added afterwards from the group detail view.
+     */
+    public static AdminSecurityDataModel.DmlResult createPermissionSetGroup(String masterLabel, String developerName, String description) {
+        verifyAdminAccess();
+        if (String.isBlank(masterLabel)) {
+            throw new AuraHandledException('A label is required to create a permission set group.');
+        }
+        String devName = sanitizeDeveloperName(String.isBlank(developerName) ? masterLabel : developerName);
+        if (String.isBlank(devName)) {
+            throw new AuraHandledException('Could not derive a valid developer name. Enter one using letters, numbers and underscores.');
+        }
+        if (![SELECT Id FROM PermissionSetGroup WHERE DeveloperName = :devName LIMIT 1].isEmpty()) {
+            throw new AuraHandledException('A permission set group with the developer name "' + devName + '" already exists. Choose another name.');
+        }
+
+        PermissionSetGroup grp = new PermissionSetGroup(
+            MasterLabel = masterLabel.abbreviate(80),
+            DeveloperName = devName,
+            Description = String.isBlank(description) ? null : description.abbreviate(255)
+        );
+        insert grp;
+        return new AdminSecurityDataModel.DmlResult(true, 'Permission set group "' + grp.MasterLabel + '" created.', grp.Id);
+    }
+
+    /**
+     * @description Add one or more permission sets as components of a group.
+     */
+    public static AdminSecurityDataModel.DmlResult addPermissionSetsToGroup(Id groupId, List<Id> permissionSetIds) {
+        verifyAdminAccess();
+        if (groupId == null || permissionSetIds == null || permissionSetIds.isEmpty()) {
+            throw new AuraHandledException('Group ID and at least one permission set are required.');
+        }
+
+        Set<Id> existing = new Set<Id>();
+        for (PermissionSetGroupComponent comp : [
+            SELECT PermissionSetId FROM PermissionSetGroupComponent
+            WHERE PermissionSetGroupId = :groupId AND PermissionSetId IN :permissionSetIds
+        ]) {
+            existing.add(comp.PermissionSetId);
+        }
+
+        List<PermissionSetGroupComponent> toInsert = new List<PermissionSetGroupComponent>();
+        for (Id psId : permissionSetIds) {
+            if (!existing.contains(psId)) {
+                toInsert.add(new PermissionSetGroupComponent(PermissionSetGroupId = groupId, PermissionSetId = psId));
+            }
+        }
+        if (!toInsert.isEmpty()) {
+            insert toInsert;
+        }
+        return new AdminSecurityDataModel.DmlResult(true, toInsert.size() + ' permission set(s) added to the group. The group is recalculating.');
+    }
+
+    /**
+     * @description Remove a permission set component from a group.
+     */
+    public static AdminSecurityDataModel.DmlResult removePermissionSetFromGroup(Id groupId, Id permissionSetId) {
+        verifyAdminAccess();
+        if (groupId == null || permissionSetId == null) {
+            throw new AuraHandledException('Group ID and permission set are required.');
+        }
+        List<PermissionSetGroupComponent> comps = [
+            SELECT Id FROM PermissionSetGroupComponent
+            WHERE PermissionSetGroupId = :groupId AND PermissionSetId = :permissionSetId
+        ];
+        if (comps.isEmpty()) {
+            return new AdminSecurityDataModel.DmlResult(true, 'That permission set is not part of the group.');
+        }
+        delete comps;
+        return new AdminSecurityDataModel.DmlResult(true, 'Permission set removed from the group. The group is recalculating.');
+    }
+
+    /**
+     * @description Turn free text into a valid developer name: starts with a letter, only
+     * letters/digits/underscores, no doubled or trailing underscores, max 40 chars.
+     */
+    private static String sanitizeDeveloperName(String raw) {
+        String name = raw.trim().replaceAll('[^a-zA-Z0-9]+', '_').replaceAll('_+', '_');
+        name = name.removeStart('_').removeEnd('_');
+        if (String.isBlank(name)) {
+            return null;
+        }
+        if (!Pattern.matches('^[a-zA-Z].*', name)) {
+            name = 'X_' + name;
+        }
+        if (name.length() > 40) {
+            name = name.substring(0, 40).removeEnd('_');
+        }
+        return name;
     }
 
     /**
@@ -1549,5 +1665,66 @@ public with sharing class AdminSecurityService {
 
         String action = isActive ? 'activated' : 'deactivated';
         return new AdminSecurityDataModel.DmlResult(true, 'User ' + u.Name + ' has been ' + action + ' successfully.', u.Id);
+    }
+
+    /**
+     * @description Create a new active user. Locale, timezone, language and email encoding default
+     * from the running admin so only identity fields and a profile are required.
+     */
+    public static AdminSecurityDataModel.DmlResult createUser(
+        String firstName,
+        String lastName,
+        String email,
+        String username,
+        String alias,
+        Id profileId
+    ) {
+        verifyAdminAccess();
+        if (String.isBlank(lastName)) {
+            throw new AuraHandledException('Last name is required.');
+        }
+        if (String.isBlank(email)) {
+            throw new AuraHandledException('Email is required.');
+        }
+        if (profileId == null) {
+            throw new AuraHandledException('A profile is required.');
+        }
+
+        String uname = (String.isBlank(username) ? email : username).trim();
+        if (![SELECT Id FROM User WHERE Username = :uname LIMIT 1].isEmpty()) {
+            throw new AuraHandledException('A user with the username "' + uname + '" already exists.');
+        }
+
+        String aliasVal = String.isBlank(alias) ? deriveAlias(firstName, lastName) : alias.trim();
+        if (aliasVal.length() > 8) {
+            aliasVal = aliasVal.substring(0, 8);
+        }
+
+        User u = new User(
+            FirstName = String.isBlank(firstName) ? null : firstName.trim(),
+            LastName = lastName.trim(),
+            Email = email.trim(),
+            Username = uname,
+            Alias = aliasVal,
+            ProfileId = profileId,
+            IsActive = true,
+            TimeZoneSidKey = UserInfo.getTimeZone().getID(),
+            LocaleSidKey = UserInfo.getLocale(),
+            EmailEncodingKey = 'UTF-8',
+            LanguageLocaleKey = UserInfo.getLanguage()
+        );
+        insert u;
+        return new AdminSecurityDataModel.DmlResult(true, 'User "' + u.LastName + '" created.', u.Id);
+    }
+
+    /** @description Build a valid (<= 8 char) alias from the user's name. */
+    private static String deriveAlias(String firstName, String lastName) {
+        String first = String.isBlank(firstName) ? '' : firstName.trim();
+        String last = String.isBlank(lastName) ? '' : lastName.trim();
+        String base = ((first.length() > 0 ? first.substring(0, 1) : '') + last).replaceAll('[^a-zA-Z0-9]', '');
+        if (String.isBlank(base)) {
+            base = 'user';
+        }
+        return base.length() > 8 ? base.substring(0, 8) : base;
     }
 }
