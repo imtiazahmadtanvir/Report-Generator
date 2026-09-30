@@ -1483,7 +1483,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
   }
 
   get showSubNavToggle() {
-    return !this.selectedProfile && !this.selectedUser;
+    return true;
   }
 
   get activeSubTabLabel() {

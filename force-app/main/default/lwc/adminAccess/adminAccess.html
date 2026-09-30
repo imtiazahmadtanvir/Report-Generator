@@ -110,57 +110,55 @@
           <!-- TAB 1: USER & PROFILE (TOGGLE: PROFILE / USER)               -->
           <!-- ---------------------------------------------------------- -->
           <template lwc:if={isUserAndProfileTab}>
-            <!-- SUB-NAVIGATION TOGGLE BAR (Visible on List Views only) -->
-            <template lwc:if={showSubNavToggle}>
-              <div class="user-profile-subnav-container">
-                <div
-                  class="user-profile-toggle-group"
-                  role="tablist"
-                  aria-label="User and Profile Views"
+            <!-- SUB-NAVIGATION TOGGLE BAR (Always Visible at the Top) -->
+            <div class="user-profile-subnav-container">
+              <div
+                class="user-profile-toggle-group"
+                role="tablist"
+                aria-label="User and Profile Views"
+              >
+                <button
+                  type="button"
+                  class={profileSubTabClass}
+                  data-subtab="profile"
+                  onclick={handleSubTabToggle}
+                  role="tab"
+                  aria-selected={isProfileSubActive}
+                  title="Switch to Profiles View"
                 >
-                  <button
-                    type="button"
-                    class={profileSubTabClass}
-                    data-subtab="profile"
-                    onclick={handleSubTabToggle}
-                    role="tab"
-                    aria-selected={isProfileSubActive}
-                    title="Switch to Profiles View"
+                  <lightning-icon
+                    icon-name="utility:identity"
+                    size="x-small"
+                    variant={profileIconVariant}
+                    class="toggle-icon"
+                  ></lightning-icon>
+                  <span class="toggle-text">Profile</span>
+                  <span class={profileCountBadgeClass}
+                    >{overview.totalProfiles}</span
                   >
-                    <lightning-icon
-                      icon-name="utility:identity"
-                      size="x-small"
-                      variant={profileIconVariant}
-                      class="toggle-icon"
-                    ></lightning-icon>
-                    <span class="toggle-text">Profile</span>
-                    <span class={profileCountBadgeClass}
-                      >{overview.totalProfiles}</span
-                    >
-                  </button>
-                  <button
-                    type="button"
-                    class={userSubTabClass}
-                    data-subtab="user"
-                    onclick={handleSubTabToggle}
-                    role="tab"
-                    aria-selected={isUserSubActive}
-                    title="Switch to Users View"
+                </button>
+                <button
+                  type="button"
+                  class={userSubTabClass}
+                  data-subtab="user"
+                  onclick={handleSubTabToggle}
+                  role="tab"
+                  aria-selected={isUserSubActive}
+                  title="Switch to Users View"
+                >
+                  <lightning-icon
+                    icon-name="utility:user"
+                    size="x-small"
+                    variant={userIconVariant}
+                    class="toggle-icon"
+                  ></lightning-icon>
+                  <span class="toggle-text">User</span>
+                  <span class={userCountBadgeClass}
+                    >{overview.totalUsers}</span
                   >
-                    <lightning-icon
-                      icon-name="utility:user"
-                      size="x-small"
-                      variant={userIconVariant}
-                      class="toggle-icon"
-                    ></lightning-icon>
-                    <span class="toggle-text">User</span>
-                    <span class={userCountBadgeClass}
-                      >{overview.totalUsers}</span
-                    >
-                  </button>
-                </div>
+                </button>
               </div>
-            </template>
+            </div>
 
             <!-- SUB-VIEW 1: PROFILES (DEFAULT) -->
             <template lwc:if={isProfileSubActive}>
@@ -2185,6 +2183,8 @@
             <lightning-input
               label="Label"
               required
+              placeholder="e.g. Sales Operations Special Access"
+              field-level-help="User-friendly display name for this Permission Set."
               value={newPs.label}
               data-field="label"
               onchange={handleNewPsFieldChange}
@@ -2192,7 +2192,8 @@
             ></lightning-input>
             <lightning-input
               label="API Name"
-              placeholder="Leave blank to derive from the label"
+              placeholder="e.g. Sales_Operations_Special_Access (auto if blank)"
+              field-level-help="Unique internal API name. Letters, numbers, and underscores only. Leave blank to generate automatically from the label."
               value={newPs.apiName}
               data-field="apiName"
               onchange={handleNewPsFieldChange}
@@ -2200,6 +2201,8 @@
             ></lightning-input>
             <lightning-combobox
               label="License"
+              placeholder="Select user license (or leave blank for all licenses)"
+              field-level-help="Associates this permission set with a specific license type. Leave blank to allow assignment to users with any license."
               value={newPs.licenseId}
               options={licenseOptions}
               data-field="licenseId"
@@ -2208,6 +2211,8 @@
             ></lightning-combobox>
             <lightning-textarea
               label="Description"
+              placeholder="Describe the permissions, object access, or feature access granted by this set..."
+              field-level-help="Internal summary explaining why this permission set was created and what access it grants."
               value={newPs.description}
               data-field="description"
               onchange={handleNewPsFieldChange}
@@ -2262,6 +2267,8 @@
               <div class="slds-col slds-size_1-of-2">
                 <lightning-input
                   label="First Name"
+                  placeholder="e.g. Jane"
+                  field-level-help="User's first name."
                   value={newUser.firstName}
                   data-field="firstName"
                   onchange={handleNewUserFieldChange}
@@ -2272,6 +2279,8 @@
                 <lightning-input
                   label="Last Name"
                   required
+                  placeholder="e.g. Doe"
+                  field-level-help="User's last name (required)."
                   value={newUser.lastName}
                   data-field="lastName"
                   onchange={handleNewUserFieldChange}
@@ -2283,6 +2292,8 @@
               label="Email"
               type="email"
               required
+              placeholder="e.g. jane.doe@company.com"
+              field-level-help="Primary email address for system notifications, task alerts, and password resets."
               value={newUser.email}
               data-field="email"
               onchange={handleNewUserFieldChange}
@@ -2290,7 +2301,8 @@
             ></lightning-input>
             <lightning-input
               label="Username"
-              placeholder="Leave blank to use the email address"
+              placeholder="e.g. jane.doe@company.com.sandbox (blank to use email)"
+              field-level-help="Unique login username in email format across all Salesforce orgs. Leave blank to use the Email address."
               value={newUser.username}
               data-field="username"
               onchange={handleNewUserFieldChange}
@@ -2300,7 +2312,8 @@
               <div class="slds-col slds-size_1-of-2">
                 <lightning-input
                   label="Alias"
-                  placeholder="Auto if blank"
+                  placeholder="e.g. jdoe (auto if blank)"
+                  field-level-help="Short display identifier (maximum 8 characters). Automatically derived from the name if left blank."
                   max-length="8"
                   value={newUser.alias}
                   data-field="alias"
@@ -2312,9 +2325,10 @@
                 <lightning-combobox
                   label="Profile"
                   required
+                  placeholder="Select a profile for baseline access"
+                  field-level-help="Determines baseline object permissions, page layouts, and administrative capabilities."
                   value={newUser.profileId}
                   options={assignableProfileOptions}
-                  placeholder="Select a profile"
                   data-field="profileId"
                   onchange={handleNewUserFieldChange}
                   class="slds-m-bottom_small"
@@ -2370,6 +2384,8 @@
             <lightning-input
               label="Label"
               required
+              placeholder="e.g. Sales Representative Bundle"
+              field-level-help="User-friendly display name for this Permission Set Group."
               value={newPsg.masterLabel}
               data-field="masterLabel"
               onchange={handleNewPsgFieldChange}
@@ -2377,7 +2393,8 @@
             ></lightning-input>
             <lightning-input
               label="Developer Name"
-              placeholder="Leave blank to derive from the label"
+              placeholder="e.g. Sales_Representative_Bundle (auto if blank)"
+              field-level-help="Unique API identifier for metadata operations. Leave blank to derive automatically from the label."
               value={newPsg.developerName}
               data-field="developerName"
               onchange={handleNewPsgFieldChange}
@@ -2385,6 +2402,8 @@
             ></lightning-input>
             <lightning-textarea
               label="Description"
+              placeholder="Describe which permission sets are bundled together and the target role..."
+              field-level-help="Summary explaining the job function or role this permission set group was created to support."
               value={newPsg.description}
               data-field="description"
               onchange={handleNewPsgFieldChange}
