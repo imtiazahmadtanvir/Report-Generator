@@ -381,33 +381,139 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     }
   }
 
-  handleTabChange(event) {
-    this.activeTab = event.detail.name || event.detail.value;
-    if (this.activeTab === "userAndProfile") {
-      if (!this.userProfileSubTab) {
-        this.userProfileSubTab = "profile";
-      }
-    } else if (this.activeTab === "apps" && this.appsList.length === 0) {
-      this.loadApps();
-    } else if (
-      this.activeTab === "objects" &&
-      this.objPermItems.length === 0 &&
-      this.objSelectedTargetId
-    ) {
-      this.fetchObjectPermissions();
-    } else if (
-      this.activeTab === "fields" &&
-      this.flsFieldItems.length === 0 &&
-      this.flsSelectedTargetId
-    ) {
-      this.fetchFieldPermissions();
+  async handleTabChange(event) {
+    const tabName = event.detail.name || event.detail.value;
+    if (!tabName) return;
+    await this.resetAndLoadTab(tabName);
+  }
+
+  async resetAndLoadTab(tabName, subTab) {
+    this.activeTab = tabName;
+
+    // Reset modals & dialogs across tabs
+    this.showConfirmModal = false;
+    this.showAssignModal = false;
+    this.showProfileModal = false;
+    this.showEditObjectModal = false;
+    this.showEditFieldModal = false;
+    this.showCreatePsModal = false;
+    this.showCreatePsgModal = false;
+    this.showCreateUserModal = false;
+
+    switch (tabName) {
+      case "userAndProfile":
+      case "profiles":
+      case "users":
+        this.activeTab = "userAndProfile";
+        this.userProfileSubTab = subTab || "profile";
+        this.selectedUser = null;
+        this.selectedProfile = null;
+        this.userSearchTerm = "";
+        this.userProfileFilter = "";
+        this.userStatusFilter = "All";
+        this.profileSearchTerm = "";
+        this.profileTypeFilter = "All";
+        this.pages = { ...this.pages, users: 1 };
+        this.isLoading = true;
+        try {
+          await Promise.all([this.loadProfiles(), this.loadUsers(true)]);
+        } catch (error) {
+          this.showToast("Error", this.extractErrorMessage(error), "error");
+        } finally {
+          this.isLoading = false;
+        }
+        break;
+
+      case "permSets":
+        this.selectedPermSet = null;
+        this.selectedPermSetSubTab = "users";
+        this.editingPermSetId = null;
+        this.psSearchTerm = "";
+        this.psTypeFilter = "All";
+        this.pages = { ...this.pages, permSets: 1 };
+        this.isLoading = true;
+        try {
+          await this.loadPermissionSets(true);
+        } catch (error) {
+          this.showToast("Error", this.extractErrorMessage(error), "error");
+        } finally {
+          this.isLoading = false;
+        }
+        break;
+
+      case "groups":
+        this.selectedGroup = null;
+        this.selectedGroupSubTab = "permSets";
+        this.psgSearchTerm = "";
+        this.psgStatusFilter = "All";
+        this.isLoading = true;
+        try {
+          await this.loadGroups();
+        } catch (error) {
+          this.showToast("Error", this.extractErrorMessage(error), "error");
+        } finally {
+          this.isLoading = false;
+        }
+        break;
+
+      case "objects":
+        this.objSearchTerm = "";
+        this.pages = { ...this.pages, objects: 1 };
+        this.updateTargetDropdowns();
+        if (this.objSelectedTargetId) {
+          await this.fetchObjectPermissions(true);
+        }
+        break;
+
+      case "fields":
+        this.flsSearchTerm = "";
+        this.pages = { ...this.pages, fls: 1 };
+        this.updateTargetDropdowns();
+        if (this.flsSelectedTargetId) {
+          await this.fetchFieldPermissions(true);
+        }
+        break;
+
+      case "apps":
+        this.appSearchTerm = "";
+        this.isLoading = true;
+        try {
+          await this.loadApps();
+        } catch (error) {
+          this.showToast("Error", this.extractErrorMessage(error), "error");
+        } finally {
+          this.isLoading = false;
+        }
+        break;
+
+      default:
+        break;
     }
   }
 
-  handleSubTabToggle(event) {
+  async handleSubTabToggle(event) {
     const subtab = event.currentTarget.dataset.subtab;
-    if (subtab && subtab !== this.userProfileSubTab) {
+    if (subtab) {
       this.userProfileSubTab = subtab;
+      this.selectedProfile = null;
+      this.selectedUser = null;
+      if (subtab === "profile") {
+        this.profileSearchTerm = "";
+        this.isLoading = true;
+        try {
+          await this.loadProfiles();
+        } finally {
+          this.isLoading = false;
+        }
+      } else {
+        this.userSearchTerm = "";
+        this.isLoading = true;
+        try {
+          await this.loadUsers(true);
+        } finally {
+          this.isLoading = false;
+        }
+      }
     }
   }
 
@@ -1657,17 +1763,10 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     ];
   }
 
-  handleStatClick(event) {
+  async handleStatClick(event) {
     const tab = event.currentTarget.dataset.tab;
     const subTab = event.currentTarget.dataset.subtab;
-    if (tab === "userAndProfile") {
-      this.activeTab = "userAndProfile";
-      if (subTab) {
-        this.userProfileSubTab = subTab;
-      }
-    } else {
-      this.handleTabChange({ detail: { name: tab } });
-    }
+    await this.resetAndLoadTab(tab, subTab);
   }
 
   navigateToUrl(url) {
