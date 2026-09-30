@@ -392,65 +392,78 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     }
   }
 
-  get isObjUserTarget() {
-    return this.objTargetType === "User";
+  get objProfileBtnVariant() {
+    return this.objTargetType === "Profile" ? "brand" : "neutral";
   }
 
-  get isFlsUserTarget() {
-    return this.flsTargetType === "User";
+  get objUserBtnVariant() {
+    return this.objTargetType === "User" ? "brand" : "neutral";
   }
 
-  get profileFilterOptions() {
-    const opts = [{ label: "All Profiles", value: "" }];
-    for (const p of this.profilesList) {
-      opts.push({
-        label:
-          p.userLicenseName && p.userLicenseName !== "None"
-            ? `${p.name} (${p.userLicenseName})`
-            : p.name,
-        value: p.id
-      });
-    }
-    return opts;
+  get objPermSetBtnVariant() {
+    return this.objTargetType === "PermissionSet" ? "brand" : "neutral";
+  }
+
+  get flsProfileBtnVariant() {
+    return this.flsTargetType === "Profile" ? "brand" : "neutral";
+  }
+
+  get flsUserBtnVariant() {
+    return this.flsTargetType === "User" ? "brand" : "neutral";
+  }
+
+  get flsPermSetBtnVariant() {
+    return this.flsTargetType === "PermissionSet" ? "brand" : "neutral";
+  }
+
+  get objTargetLabel() {
+    if (this.objTargetType === "User") return "Select User";
+    if (this.objTargetType === "PermissionSet") return "Select Permission Set";
+    return "Select Profile";
+  }
+
+  get flsTargetLabel() {
+    if (this.flsTargetType === "User") return "Select User";
+    if (this.flsTargetType === "PermissionSet") return "Select Permission Set";
+    return "Select Profile";
   }
 
   get objTargetPlaceholder() {
     if (this.objTargetType === "User") return "Select User...";
-    if (this.objTargetType === "Profile") return "Select Profile...";
-    return "Select Permission Set...";
+    if (this.objTargetType === "PermissionSet") return "Select Permission Set...";
+    return "Select Profile...";
   }
 
   get flsTargetPlaceholder() {
     if (this.flsTargetType === "User") return "Select User...";
-    if (this.flsTargetType === "Profile") return "Select Profile...";
-    return "Select Permission Set...";
+    if (this.flsTargetType === "PermissionSet") return "Select Permission Set...";
+    return "Select Profile...";
   }
 
   updateTargetDropdowns() {
     if (this.objTargetType === "PermissionSet") {
       this.objTargetOptions = this.permSetOptionsAll.map((ps) => ({
-        label: ps.label + (ps.isCustom ? " (Custom)" : " (Standard)"),
+        label: `${ps.label} (${ps.isCustom ? "Custom" : "Standard"})`,
         value: ps.id
       }));
     } else if (this.objTargetType === "User") {
-      let filteredUsers = this.allUserOptions;
-      if (this.objProfileFilter) {
-        filteredUsers = filteredUsers.filter(
-          (u) => u.profileId === this.objProfileFilter
-        );
-      }
-      this.objTargetOptions = filteredUsers.map((u) => ({
+      this.objTargetOptions = this.allUserOptions.map((u) => ({
         label: `${u.name} (${u.licenseName})`,
         value: u.id
       }));
     } else {
-      this.objTargetOptions = this.profilesList.map((p) => ({
-        label:
-          p.userLicenseName && p.userLicenseName !== "None"
-            ? `${p.name} (${p.userLicenseName})`
-            : p.name,
-        value: p.id
-      }));
+      this.objTargetOptions = this.profilesList.map((p) => {
+        const lic =
+          p.userLicenseName &&
+          p.userLicenseName !== "None" &&
+          p.userLicenseName !== p.name
+            ? ` (${p.userLicenseName})`
+            : "";
+        return {
+          label: `${p.name}${lic}`,
+          value: p.id
+        };
+      });
     }
     if (
       this.objTargetOptions.length > 0 &&
@@ -461,28 +474,27 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
     if (this.flsTargetType === "PermissionSet") {
       this.flsTargetOptions = this.permSetOptionsAll.map((ps) => ({
-        label: ps.label + (ps.isCustom ? " (Custom)" : " (Standard)"),
+        label: `${ps.label} (${ps.isCustom ? "Custom" : "Standard"})`,
         value: ps.id
       }));
     } else if (this.flsTargetType === "User") {
-      let filteredUsers = this.allUserOptions;
-      if (this.flsProfileFilter) {
-        filteredUsers = filteredUsers.filter(
-          (u) => u.profileId === this.flsProfileFilter
-        );
-      }
-      this.flsTargetOptions = filteredUsers.map((u) => ({
+      this.flsTargetOptions = this.allUserOptions.map((u) => ({
         label: `${u.name} (${u.licenseName})`,
         value: u.id
       }));
     } else {
-      this.flsTargetOptions = this.profilesList.map((p) => ({
-        label:
-          p.userLicenseName && p.userLicenseName !== "None"
-            ? `${p.name} (${p.userLicenseName})`
-            : p.name,
-        value: p.id
-      }));
+      this.flsTargetOptions = this.profilesList.map((p) => {
+        const lic =
+          p.userLicenseName &&
+          p.userLicenseName !== "None" &&
+          p.userLicenseName !== p.name
+            ? ` (${p.userLicenseName})`
+            : "";
+        return {
+          label: `${p.name}${lic}`,
+          value: p.id
+        };
+      });
     }
     if (
       this.flsTargetOptions.length > 0 &&
@@ -490,6 +502,54 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     ) {
       this.flsSelectedTargetId = this.flsTargetOptions[0].value;
     }
+  }
+
+  handleObjViewByProfile() {
+    if (this.objTargetType === "Profile") return;
+    this.objTargetType = "Profile";
+    this.objSelectedTargetId = "";
+    this.updateTargetDropdowns();
+    this.fetchObjectPermissions();
+  }
+
+  handleObjViewByUser() {
+    if (this.objTargetType === "User") return;
+    this.objTargetType = "User";
+    this.objSelectedTargetId = "";
+    this.updateTargetDropdowns();
+    this.fetchObjectPermissions();
+  }
+
+  handleObjViewByPermSet() {
+    if (this.objTargetType === "PermissionSet") return;
+    this.objTargetType = "PermissionSet";
+    this.objSelectedTargetId = "";
+    this.updateTargetDropdowns();
+    this.fetchObjectPermissions();
+  }
+
+  handleFlsViewByProfile() {
+    if (this.flsTargetType === "Profile") return;
+    this.flsTargetType = "Profile";
+    this.flsSelectedTargetId = "";
+    this.updateTargetDropdowns();
+    this.fetchFieldPermissions();
+  }
+
+  handleFlsViewByUser() {
+    if (this.flsTargetType === "User") return;
+    this.flsTargetType = "User";
+    this.flsSelectedTargetId = "";
+    this.updateTargetDropdowns();
+    this.fetchFieldPermissions();
+  }
+
+  handleFlsViewByPermSet() {
+    if (this.flsTargetType === "PermissionSet") return;
+    this.flsTargetType = "PermissionSet";
+    this.flsSelectedTargetId = "";
+    this.updateTargetDropdowns();
+    this.fetchFieldPermissions();
   }
 
   async handleTabChange(event) {
@@ -1132,13 +1192,6 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     this.fetchObjectPermissions();
   }
 
-  handleObjProfileFilterChange(event) {
-    this.objProfileFilter = event.detail.value;
-    this.objSelectedTargetId = "";
-    this.updateTargetDropdowns();
-    this.fetchObjectPermissions();
-  }
-
   handleObjTargetChange(event) {
     this.objSelectedTargetId = event.detail.value;
     this.fetchObjectPermissions();
@@ -1253,13 +1306,6 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
   handleFlsTargetTypeChange(event) {
     this.flsTargetType = event.detail.value;
-    this.flsSelectedTargetId = "";
-    this.updateTargetDropdowns();
-    this.fetchFieldPermissions();
-  }
-
-  handleFlsProfileFilterChange(event) {
-    this.flsProfileFilter = event.detail.value;
     this.flsSelectedTargetId = "";
     this.updateTargetDropdowns();
     this.fetchFieldPermissions();

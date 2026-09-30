@@ -1599,32 +1599,33 @@
           <!-- ---------------------------------------------------------- -->
           <template lwc:if={isObjectsTab}>
             <div class="section-toolbar">
-              <div class="toolbar-filters">
-                <div class="filter-combo-box">
-                  <lightning-combobox
-                    label="View By"
-                    variant="label-hidden"
-                    value={objTargetType}
-                    options={targetTypeOptions}
-                    onchange={handleObjTargetTypeChange}
-                  ></lightning-combobox>
+              <div class="toolbar-filters filters-with-labels">
+                <div class="filter-group">
+                  <label class="slds-form-element__label">View Access By</label>
+                  <lightning-button-group>
+                    <lightning-button
+                      label="Profile"
+                      icon-name="standard:profile"
+                      variant={objProfileBtnVariant}
+                      onclick={handleObjViewByProfile}
+                    ></lightning-button>
+                    <lightning-button
+                      label="User"
+                      icon-name="standard:user"
+                      variant={objUserBtnVariant}
+                      onclick={handleObjViewByUser}
+                    ></lightning-button>
+                    <lightning-button
+                      label="Permission Set"
+                      icon-name="standard:permission_set"
+                      variant={objPermSetBtnVariant}
+                      onclick={handleObjViewByPermSet}
+                    ></lightning-button>
+                  </lightning-button-group>
                 </div>
-                <template lwc:if={isObjUserTarget}>
-                  <div class="filter-combo-box">
-                    <lightning-combobox
-                      label="Filter by Profile"
-                      variant="label-hidden"
-                      value={objProfileFilter}
-                      options={profileFilterOptions}
-                      placeholder="All Profiles"
-                      onchange={handleObjProfileFilterChange}
-                    ></lightning-combobox>
-                  </div>
-                </template>
                 <div class="search-input-box">
                   <lightning-combobox
-                    label="Select Target"
-                    variant="label-hidden"
+                    label={objTargetLabel}
                     value={objSelectedTargetId}
                     options={objTargetOptions}
                     placeholder={objTargetPlaceholder}
@@ -1635,8 +1636,7 @@
                   <lightning-input
                     type="search"
                     label="Search Objects"
-                    variant="label-hidden"
-                    placeholder="Filter by Object API Name..."
+                    placeholder="Search by Object API Name..."
                     value={objSearchTerm}
                     onchange={handleObjSearch}
                   ></lightning-input>
@@ -1795,41 +1795,41 @@
           <!-- ---------------------------------------------------------- -->
           <template lwc:if={isFieldsTab}>
             <div class="section-toolbar">
-              <div class="toolbar-filters">
+              <div class="toolbar-filters filters-with-labels">
                 <div class="filter-combo-box">
                   <lightning-combobox
                     label="Select Object"
-                    variant="label-hidden"
                     value={flsSelectedObject}
                     options={objectOptions}
                     onchange={handleFlsObjectChange}
                   ></lightning-combobox>
                 </div>
-                <div class="filter-combo-box">
-                  <lightning-combobox
-                    label="View By"
-                    variant="label-hidden"
-                    value={flsTargetType}
-                    options={targetTypeOptions}
-                    onchange={handleFlsTargetTypeChange}
-                  ></lightning-combobox>
+                <div class="filter-group">
+                  <label class="slds-form-element__label">View Access By</label>
+                  <lightning-button-group>
+                    <lightning-button
+                      label="Profile"
+                      icon-name="standard:profile"
+                      variant={flsProfileBtnVariant}
+                      onclick={handleFlsViewByProfile}
+                    ></lightning-button>
+                    <lightning-button
+                      label="User"
+                      icon-name="standard:user"
+                      variant={flsUserBtnVariant}
+                      onclick={handleFlsViewByUser}
+                    ></lightning-button>
+                    <lightning-button
+                      label="Permission Set"
+                      icon-name="standard:permission_set"
+                      variant={flsPermSetBtnVariant}
+                      onclick={handleFlsViewByPermSet}
+                    ></lightning-button>
+                  </lightning-button-group>
                 </div>
-                <template lwc:if={isFlsUserTarget}>
-                  <div class="filter-combo-box">
-                    <lightning-combobox
-                      label="Filter by Profile"
-                      variant="label-hidden"
-                      value={flsProfileFilter}
-                      options={profileFilterOptions}
-                      placeholder="All Profiles"
-                      onchange={handleFlsProfileFilterChange}
-                    ></lightning-combobox>
-                  </div>
-                </template>
                 <div class="search-input-box">
                   <lightning-combobox
-                    label="Select Target"
-                    variant="label-hidden"
+                    label={flsTargetLabel}
                     value={flsSelectedTargetId}
                     options={flsTargetOptions}
                     placeholder={flsTargetPlaceholder}
@@ -1840,7 +1840,6 @@
                   <lightning-input
                     type="search"
                     label="Search Fields"
-                    variant="label-hidden"
                     placeholder="Filter fields by name or label..."
                     value={flsSearchTerm}
                     onchange={handleFlsSearch}

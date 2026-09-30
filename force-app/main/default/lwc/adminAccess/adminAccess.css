@@ -398,6 +398,22 @@
   flex-grow: 1;
 }
 
+.toolbar-filters.filters-with-labels {
+  align-items: flex-end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-group .slds-form-element__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0.125rem;
+}
+
 .search-input-box {
   min-width: 260px;
   max-width: 380px;
