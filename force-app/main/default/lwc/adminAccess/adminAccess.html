@@ -1178,23 +1178,20 @@
                         <th>Type</th>
                         <th>License</th>
                         <th class="slds-text-align_center">Users</th>
-                        <th class="slds-text-align_right">Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       <template for:each={permSetsView.rows} for:item="ps">
                         <tr key={ps.id}>
                           <td data-label="Permission Set">
-                            <div class="cell-title">{ps.label}</div>
-                            <div class="cell-sub"><code>{ps.name}</code></div>
-                            <template lwc:if={ps.description}>
-                              <div
-                                class="cell-sub cell-clip-line"
-                                title={ps.description}
-                              >
-                                {ps.description}
-                              </div>
-                            </template>
+                            <button
+                              class="link-name"
+                              data-id={ps.id}
+                              onclick={handleViewPermSetDetail}
+                              title="Manage access"
+                            >
+                              {ps.label}
+                            </button>
                           </td>
                           <td data-label="Type">
                             <span class={ps.typeClass}>{ps.typeBadge}</span>
@@ -1206,27 +1203,6 @@
                           </td>
                           <td data-label="Users" class="slds-text-align_center">
                             <span class="badge-count">{ps.userCount}</span>
-                          </td>
-                          <td data-label="Action" class="slds-text-align_right">
-                            <lightning-button-group>
-                              <lightning-button
-                                label="View"
-                                icon-name="utility:preview"
-                                variant="neutral"
-                                data-id={ps.id}
-                                onclick={handleViewPermSetDetail}
-                              ></lightning-button>
-                              <template lwc:if={ps.isCustom}>
-                                <lightning-button
-                                  label="Edit"
-                                  icon-name="utility:edit"
-                                  variant="brand-outline"
-                                  data-id={ps.id}
-                                  data-label={ps.label}
-                                  onclick={handleOpenPermSetEditor}
-                                ></lightning-button>
-                              </template>
-                            </lightning-button-group>
                           </td>
                         </tr>
                       </template>
@@ -1571,25 +1547,20 @@
                       <th>Status</th>
                       <th class="slds-text-align_center">Sets</th>
                       <th class="slds-text-align_center">Users</th>
-                      <th class="slds-text-align_right">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     <template for:each={groupsList} for:item="grp">
                       <tr key={grp.id}>
                         <td data-label="Permission Set Group">
-                          <div class="cell-title">{grp.masterLabel}</div>
-                          <div class="cell-sub">
-                            <code>{grp.developerName}</code>
-                          </div>
-                          <template lwc:if={grp.description}>
-                            <div
-                              class="cell-sub cell-clip-line"
-                              title={grp.description}
-                            >
-                              {grp.description}
-                            </div>
-                          </template>
+                          <button
+                            class="link-name"
+                            data-id={grp.id}
+                            onclick={handleViewGroupDetail}
+                            title="Manage access"
+                          >
+                            {grp.masterLabel}
+                          </button>
                         </td>
                         <td data-label="Status">
                           <span class="badge-active">{grp.status}</span>
@@ -1601,15 +1572,6 @@
                           <span class="badge-count"
                             >{grp.assignedUserCount}</span
                           >
-                        </td>
-                        <td data-label="Action" class="slds-text-align_right">
-                          <lightning-button
-                            label="View"
-                            icon-name="utility:preview"
-                            variant="neutral"
-                            data-id={grp.id}
-                            onclick={handleViewGroupDetail}
-                          ></lightning-button>
                         </td>
                       </tr>
                     </template>
