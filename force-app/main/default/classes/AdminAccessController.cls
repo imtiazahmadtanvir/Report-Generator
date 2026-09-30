@@ -122,6 +122,51 @@ public with sharing class AdminAccessController {
     }
 
     @AuraEnabled(cacheable=true)
+    public static List<AdminSecurityDataModel.AppAccessSummary> getFilteredAppAccessList(String searchTerm, String typeFilter) {
+        try {
+            return AdminSecurityService.getAppAccessList(searchTerm, typeFilter);
+        } catch (Exception ex) {
+            throw new AuraHandledException(ex.getMessage());
+        }
+    }
+
+    @AuraEnabled(cacheable=false)
+    public static AdminSecurityDataModel.AppDetailView getAppDetail(String applicationId, String appDefinitionId) {
+        try {
+            return AdminSecurityService.getAppDetail(applicationId, appDefinitionId);
+        } catch (Exception ex) {
+            throw new AuraHandledException(ex.getMessage());
+        }
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static List<AdminSecurityDataModel.AppObjectField> getAppObjectFields(String sobjectType) {
+        try {
+            return AdminSecurityService.getAppObjectFields(sobjectType);
+        } catch (Exception ex) {
+            throw new AuraHandledException(ex.getMessage());
+        }
+    }
+
+    @AuraEnabled
+    public static AdminSecurityDataModel.DmlResult assignProfileToApp(String applicationId, String profileId) {
+        try {
+            return AdminSecurityService.assignProfileToApp(applicationId, profileId);
+        } catch (Exception ex) {
+            throw new AuraHandledException(ex.getMessage());
+        }
+    }
+
+    @AuraEnabled
+    public static AdminSecurityDataModel.DmlResult removeProfileFromApp(String applicationId, String profileId) {
+        try {
+            return AdminSecurityService.removeProfileFromApp(applicationId, profileId);
+        } catch (Exception ex) {
+            throw new AuraHandledException(ex.getMessage());
+        }
+    }
+
+    @AuraEnabled(cacheable=true)
     public static List<AdminSecurityDataModel.SelectOption> getAccessibleObjects() {
         try {
             Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();

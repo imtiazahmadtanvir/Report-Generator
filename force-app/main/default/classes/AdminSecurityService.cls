@@ -1788,16 +1788,38 @@ public with sharing class AdminSecurityService {
   public static List<AdminSecurityDataModel.AppAccessSummary> getAppAccessList(
     String searchTerm
   ) {
+    return getAppAccessList(searchTerm, 'All');
+  }
+
+  public static List<AdminSecurityDataModel.AppAccessSummary> getAppAccessList(
+    String searchTerm,
+    String typeFilter
+  ) {
     verifyAdminAccess();
 
-    String query = 'SELECT Id, Name, Label, Description, Type, IsVisible, IsAccessible, ApplicationId FROM AppMenuItem WHERE Type = \'TabSet\' OR Type = \'ConnectedApplication\'';
+    String query = 'SELECT Id, Name, Label, Description, Type, IsVisible, IsAccessible, ApplicationId, NamespacePrefix FROM AppMenuItem WHERE Type = \'TabSet\'';
     if (String.isNotBlank(searchTerm)) {
       String term = '%' + String.escapeSingleQuotes(searchTerm.trim()) + '%';
       query += ' AND (Name LIKE :term OR Label LIKE :term OR Description LIKE :term)';
     }
-    query += ' ORDER BY Label ASC LIMIT 100';
+    query += ' ORDER BY Label ASC LIMIT 200';
 
     List<AppMenuItem> menuItems = Database.query(query);
+
+    // Map AppDefinition by 15-char suffix and DeveloperName
+    Map<String, AppDefinition> appDefBySuffix = new Map<String, AppDefinition>();
+    Map<String, AppDefinition> appDefByName = new Map<String, AppDefinition>();
+    for (AppDefinition ad : [
+      SELECT DurableId, Label, DeveloperName, Description, NavType, HeaderColor
+      FROM AppDefinition
+    ]) {
+      if (ad.DurableId != null && ad.DurableId.length() >= 15) {
+        appDefBySuffix.put(ad.DurableId.substring(3), ad);
+      }
+      if (String.isNotBlank(ad.DeveloperName)) {
+        appDefByName.put(ad.DeveloperName.toLowerCase(), ad);
+      }
+    }
 
     // Fetch SetupEntityAccess for apps
     List<SetupEntityAccess> seaList = [
@@ -1810,7 +1832,7 @@ public with sharing class AdminSecurityService {
         Parent.Profile.Name
       FROM SetupEntityAccess
       WHERE SetupEntityType = 'TabSet'
-      LIMIT 500
+      LIMIT 1000
     ];
 
     Map<Id, List<String>> appProfilesMap = new Map<Id, List<String>>();
@@ -1832,6 +1854,14 @@ public with sharing class AdminSecurityService {
 
     List<AdminSecurityDataModel.AppAccessSummary> results = new List<AdminSecurityDataModel.AppAccessSummary>();
     for (AppMenuItem item : menuItems) {
+      Boolean isCustom = (item.NamespacePrefix != 'standard');
+      if ('Custom'.equalsIgnoreCase(typeFilter) && !isCustom) {
+        continue;
+      }
+      if ('Standard'.equalsIgnoreCase(typeFilter) && isCustom) {
+        continue;
+      }
+
       AdminSecurityDataModel.AppAccessSummary dto = new AdminSecurityDataModel.AppAccessSummary();
       dto.id = item.Id;
       dto.label = item.Label;
@@ -1842,8 +1872,36 @@ public with sharing class AdminSecurityService {
       dto.type = item.Type;
       dto.isVisible = item.IsVisible;
       dto.isAccessible = item.IsAccessible;
+      dto.isCustom = isCustom;
 
       Id appId = item.ApplicationId != null ? item.ApplicationId : item.Id;
+      dto.applicationId = String.valueOf(appId);
+
+      // Match AppDefinition
+      AppDefinition matchedDef = null;
+      if (item.ApplicationId != null) {
+        String appIdStr = String.valueOf(item.ApplicationId);
+        if (appIdStr.length() >= 15) {
+          matchedDef = appDefBySuffix.get(appIdStr.substring(3));
+        }
+      }
+      if (matchedDef == null && String.isNotBlank(item.Name)) {
+        matchedDef = appDefByName.get(item.Name.toLowerCase());
+      }
+
+      if (matchedDef != null) {
+        dto.appDefinitionId = matchedDef.DurableId;
+        dto.navType = matchedDef.NavType;
+        dto.headerColor = matchedDef.HeaderColor;
+      } else if (item.ApplicationId != null) {
+        String appIdStr = String.valueOf(item.ApplicationId);
+        if (appIdStr.startsWith('02u') && appIdStr.length() >= 15) {
+          dto.appDefinitionId = '06m' + appIdStr.substring(3);
+        }
+        dto.navType = 'Standard';
+        dto.headerColor = '#0176D3';
+      }
+
       List<String> profList = appProfilesMap.containsKey(appId)
         ? appProfilesMap.get(appId)
         : new List<String>();
@@ -1861,6 +1919,435 @@ public with sharing class AdminSecurityService {
 
     results.sort();
     return results;
+  }
+
+  /**
+   * @description Get comprehensive detail view for an App including tabs, objects used, and profile access
+   */
+  public static AdminSecurityDataModel.AppDetailView getAppDetail(
+    String applicationId,
+    String appDefinitionId
+  ) {
+    verifyAdminAccess();
+
+    if (String.isBlank(applicationId) && String.isBlank(appDefinitionId)) {
+      throw new AuraHandledException('App ID or Definition ID is required.');
+    }
+
+    if (String.isBlank(applicationId) && String.isNotBlank(appDefinitionId)) {
+      if (appDefinitionId.startsWith('06m') && appDefinitionId.length() >= 15) {
+        applicationId = '02u' + appDefinitionId.substring(3);
+      }
+    }
+    if (String.isBlank(appDefinitionId) && String.isNotBlank(applicationId)) {
+      if (applicationId.startsWith('02u') && applicationId.length() >= 15) {
+        appDefinitionId = '06m' + applicationId.substring(3);
+      }
+    }
+
+    List<AppMenuItem> menuItems = [
+      SELECT Id, Name, Label, Description, Type, IsVisible, IsAccessible, ApplicationId, NamespacePrefix
+      FROM AppMenuItem
+      WHERE ApplicationId = :applicationId OR Id = :applicationId
+      LIMIT 1
+    ];
+    AppMenuItem menuItem = menuItems.isEmpty() ? null : menuItems[0];
+
+    List<AppDefinition> appDefs = [
+      SELECT DurableId, Label, DeveloperName, Description, NavType, HeaderColor
+      FROM AppDefinition
+      WHERE DurableId = :appDefinitionId
+      LIMIT 1
+    ];
+    AppDefinition appDef = appDefs.isEmpty() ? null : appDefs[0];
+
+    AdminSecurityDataModel.AppAccessSummary appDto = new AdminSecurityDataModel.AppAccessSummary();
+    if (menuItem != null) {
+      appDto.id = menuItem.Id;
+      appDto.applicationId = String.valueOf(menuItem.ApplicationId);
+      appDto.label = appDef != null ? appDef.Label : menuItem.Label;
+      appDto.developerName = appDef != null ? appDef.DeveloperName : menuItem.Name;
+      appDto.description = appDef != null && String.isNotBlank(appDef.Description)
+        ? appDef.Description
+        : (menuItem.Description != null ? menuItem.Description : 'Salesforce Application');
+      appDto.isCustom = (menuItem.NamespacePrefix != 'standard');
+      appDto.type = menuItem.Type;
+      appDto.isVisible = menuItem.IsVisible;
+      appDto.isAccessible = menuItem.IsAccessible;
+    } else if (appDef != null) {
+      appDto.id = appDef.DurableId;
+      appDto.applicationId = applicationId;
+      appDto.label = appDef.Label;
+      appDto.developerName = appDef.DeveloperName;
+      appDto.description = appDef.Description;
+      appDto.isCustom = (appDef.DeveloperName != null && (appDef.DeveloperName.contains('__') || !appDef.DeveloperName.startsWith('standard')));
+      appDto.type = 'TabSet';
+      appDto.isVisible = true;
+      appDto.isAccessible = true;
+    }
+    appDto.appDefinitionId = appDefinitionId;
+    appDto.navType = appDef != null && String.isNotBlank(appDef.NavType) ? appDef.NavType : 'Standard';
+    appDto.headerColor = appDef != null && String.isNotBlank(appDef.HeaderColor) ? appDef.HeaderColor : '#0176D3';
+    appDto.setupUrl = '/lightning/setup/AppManager/home';
+
+    // Tabs & Objects
+    List<AdminSecurityDataModel.AppTabItem> tabItems = new List<AdminSecurityDataModel.AppTabItem>();
+    Map<String, AdminSecurityDataModel.AppObjectItem> objectMap = new Map<String, AdminSecurityDataModel.AppObjectItem>();
+
+    if (String.isNotBlank(appDefinitionId)) {
+      List<AppTabMember> tabMembers = [
+        SELECT DurableId, TabDefinitionId, SortOrder
+        FROM AppTabMember
+        WHERE AppDefinitionId = :appDefinitionId
+        ORDER BY SortOrder ASC
+      ];
+
+      Set<String> tabDefIds = new Set<String>();
+      for (AppTabMember m : tabMembers) {
+        if (String.isNotBlank(m.TabDefinitionId)) {
+          tabDefIds.add(m.TabDefinitionId);
+        }
+      }
+
+      Map<String, TabDefinition> tabDefMap = new Map<String, TabDefinition>();
+      if (!tabDefIds.isEmpty()) {
+        for (TabDefinition td : [
+          SELECT DurableId, Label, Name, SobjectName, IsCustom
+          FROM TabDefinition
+          WHERE DurableId IN :tabDefIds
+        ]) {
+          tabDefMap.put(td.DurableId, td);
+        }
+      }
+
+      Map<String, Schema.SObjectType> globalDescribe = Schema.getGlobalDescribe();
+
+      for (AppTabMember m : tabMembers) {
+        TabDefinition td = tabDefMap.get(m.TabDefinitionId);
+        if (td == null) {
+          continue;
+        }
+
+        AdminSecurityDataModel.AppTabItem tabItem = new AdminSecurityDataModel.AppTabItem();
+        tabItem.id = td.DurableId;
+        tabItem.sortOrder = m.SortOrder;
+        tabItem.tabLabel = td.Label;
+        tabItem.tabName = td.Name;
+        tabItem.sobjectName = td.SobjectName;
+        tabItem.isCustom = td.IsCustom;
+
+        Boolean isObject = (String.isNotBlank(td.SobjectName) && !td.SobjectName.startsWith('0R'));
+        tabItem.isObjectTab = isObject;
+
+        if (isObject) {
+          Schema.SObjectType sObjType = globalDescribe.get(td.SobjectName.toLowerCase());
+          if (sObjType != null) {
+            Schema.DescribeSObjectResult describe = sObjType.getDescribe();
+            tabItem.sobjectLabel = describe.getLabel();
+            tabItem.fieldCount = describe.fields.getMap().size();
+
+            String objKey = td.SobjectName.toLowerCase();
+            if (!objectMap.containsKey(objKey)) {
+              AdminSecurityDataModel.AppObjectItem objItem = new AdminSecurityDataModel.AppObjectItem();
+              objItem.apiName = describe.getName();
+              objItem.label = describe.getLabel();
+              objItem.isCustom = describe.isCustom();
+              objItem.fieldCount = describe.fields.getMap().size();
+              objItem.usedInTabs = new List<String>{ td.Label };
+              objectMap.put(objKey, objItem);
+            } else {
+              AdminSecurityDataModel.AppObjectItem existingObj = objectMap.get(objKey);
+              if (!existingObj.usedInTabs.contains(td.Label)) {
+                existingObj.usedInTabs.add(td.Label);
+              }
+            }
+          } else {
+            tabItem.sobjectLabel = td.SobjectName;
+            tabItem.fieldCount = 0;
+          }
+        } else {
+          tabItem.sobjectLabel = 'Web / Lightning Component';
+          tabItem.fieldCount = 0;
+        }
+
+        tabItems.add(tabItem);
+      }
+    }
+
+    tabItems.sort();
+    List<AdminSecurityDataModel.AppObjectItem> objectsList = objectMap.values();
+    objectsList.sort();
+
+    // Profile Access
+    List<PermissionSet> profilePermSets = [
+      SELECT Id, ProfileId, Profile.Name, Profile.UserLicense.Name
+      FROM PermissionSet
+      WHERE IsOwnedByProfile = true AND ProfileId != null
+      ORDER BY Profile.Name ASC
+    ];
+
+    Id targetAppId = (menuItem != null && menuItem.ApplicationId != null) ? menuItem.ApplicationId : (Id)applicationId;
+    List<SetupEntityAccess> seaList = [
+      SELECT Id, ParentId, Parent.ProfileId
+      FROM SetupEntityAccess
+      WHERE SetupEntityType = 'TabSet' AND SetupEntityId = :targetAppId
+    ];
+
+    Set<Id> profilesWithAccess = new Set<Id>();
+    for (SetupEntityAccess sea : seaList) {
+      if (sea.Parent != null && sea.Parent.ProfileId != null) {
+        profilesWithAccess.add(sea.Parent.ProfileId);
+      }
+    }
+
+    Boolean isStandardApp = (appDto.isCustom == false);
+    List<AdminSecurityDataModel.AppProfileAccessItem> profileAccessList = new List<AdminSecurityDataModel.AppProfileAccessItem>();
+    for (PermissionSet ps : profilePermSets) {
+      AdminSecurityDataModel.AppProfileAccessItem pItem = new AdminSecurityDataModel.AppProfileAccessItem();
+      pItem.profileId = ps.ProfileId;
+      pItem.profileName = ps.Profile.Name;
+      pItem.userLicenseName = ps.Profile.UserLicense != null ? ps.Profile.UserLicense.Name : 'Standard';
+      pItem.permissionSetId = ps.Id;
+      pItem.hasAccess = profilesWithAccess.contains(ps.ProfileId);
+
+      String licenseLower = pItem.userLicenseName.toLowerCase();
+      if (!pItem.hasAccess && isStandardApp && (licenseLower.contains('guest') || licenseLower.contains('chatter free') || licenseLower.contains('minimum access'))) {
+        pItem.isRestricted = true;
+        pItem.restrictionReason = pItem.userLicenseName + ' profiles cannot access standard Salesforce applications (platform limit: 0).';
+      } else {
+        pItem.isRestricted = false;
+        pItem.restrictionReason = null;
+      }
+
+      profileAccessList.add(pItem);
+    }
+    profileAccessList.sort();
+
+    appDto.tabCount = tabItems.size();
+    appDto.objectCount = objectsList.size();
+    appDto.profilesCount = profilesWithAccess.size();
+
+    AdminSecurityDataModel.AppDetailView detailView = new AdminSecurityDataModel.AppDetailView();
+    detailView.app = appDto;
+    detailView.tabs = tabItems;
+    detailView.objects = objectsList;
+    detailView.profiles = profileAccessList;
+    detailView.totalTabs = tabItems.size();
+    detailView.totalObjects = objectsList.size();
+    detailView.totalProfilesWithAccess = profilesWithAccess.size();
+
+    return detailView;
+  }
+
+  /**
+   * @description Get field list for an object used by an app
+   */
+  public static List<AdminSecurityDataModel.AppObjectField> getAppObjectFields(String sobjectType) {
+    verifyAdminAccess();
+    if (String.isBlank(sobjectType)) {
+      return new List<AdminSecurityDataModel.AppObjectField>();
+    }
+
+    Schema.SObjectType objType = Schema.getGlobalDescribe().get(sobjectType.toLowerCase());
+    if (objType == null) {
+      return new List<AdminSecurityDataModel.AppObjectField>();
+    }
+
+    Schema.DescribeSObjectResult describe = objType.getDescribe();
+    List<AdminSecurityDataModel.AppObjectField> fields = new List<AdminSecurityDataModel.AppObjectField>();
+
+    for (Schema.SObjectField f : describe.fields.getMap().values()) {
+      Schema.DescribeFieldResult fd = f.getDescribe();
+      AdminSecurityDataModel.AppObjectField item = new AdminSecurityDataModel.AppObjectField();
+      item.apiName = fd.getName();
+      item.label = fd.getLabel();
+      item.dataType = String.valueOf(fd.getType());
+      item.isCustom = fd.isCustom();
+      item.isRequired = !fd.isNillable() && !fd.isDefaultedOnCreate();
+      fields.add(item);
+    }
+
+    fields.sort();
+    return fields;
+  }
+
+  /**
+   * @description Cleans raw Salesforce DML and database exception messages into clear, friendly text
+   */
+  public static String cleanExceptionMessage(Exception ex, String profileName, String licenseName) {
+    if (ex == null) {
+      return 'An unexpected error occurred.';
+    }
+    String msg = ex.getMessage();
+    if (String.isBlank(msg)) {
+      return 'An unexpected error occurred.';
+    }
+
+    if (msg.contains('TABSET_LIMIT_EXCEEDED')) {
+      String lic = String.isNotBlank(licenseName) ? licenseName : 'this license';
+      String prof = String.isNotBlank(profileName) ? 'Profile "' + profileName + '"' : 'This profile';
+      return prof + ' cannot be assigned to this application because Salesforce does not permit "' + lic + '" profiles to access standard applications (license limit: 0 standard apps).';
+    }
+    if (msg.contains('DUPLICATE_VALUE')) {
+      return (String.isNotBlank(profileName) ? 'Profile "' + profileName + '"' : 'This profile') + ' already has access to this application.';
+    }
+    if (msg.contains('INSUFFICIENT_ACCESS')) {
+      return 'You do not have sufficient administrative permissions to update application access for Profile "' + (String.isNotBlank(profileName) ? profileName : '') + '".';
+    }
+
+    // Clean up generic "Insert failed. First exception on row 0; first error: ERROR_CODE, Message : []"
+    if (msg.contains('first error:')) {
+      Integer startIdx = msg.indexOf('first error:');
+      String sub = msg.substring(startIdx + 12).trim();
+      Integer commaIdx = sub.indexOf(',');
+      if (commaIdx != -1 && commaIdx < 40) {
+        sub = sub.substring(commaIdx + 1).trim();
+      }
+      if (sub.endsWith(': []')) {
+        sub = sub.substring(0, sub.length() - 4).trim();
+      } else if (sub.endsWith('[]')) {
+        sub = sub.substring(0, sub.length() - 2).trim();
+      }
+      if (String.isNotBlank(sub)) {
+        return sub;
+      }
+    }
+
+    return msg;
+  }
+
+  /**
+   * @description Assign profile access to an application
+   */
+  public static AdminSecurityDataModel.DmlResult assignProfileToApp(
+    String applicationId,
+    String profileId
+  ) {
+    verifyAdminAccess();
+
+    if (String.isBlank(applicationId) || String.isBlank(profileId)) {
+      return new AdminSecurityDataModel.DmlResult(false, 'Application ID and Profile ID are required.');
+    }
+
+    if (applicationId.startsWith('06m') && applicationId.length() >= 15) {
+      applicationId = '02u' + applicationId.substring(3);
+    }
+
+    List<PermissionSet> permSets = [
+      SELECT Id, Profile.Name, Profile.UserLicense.Name
+      FROM PermissionSet
+      WHERE ProfileId = :profileId AND IsOwnedByProfile = true
+      LIMIT 1
+    ];
+    if (permSets.isEmpty()) {
+      return new AdminSecurityDataModel.DmlResult(false, 'Companion Permission Set not found for profile: ' + profileId);
+    }
+    PermissionSet ps = permSets[0];
+    String licenseName = (ps.Profile != null && ps.Profile.UserLicense != null) ? ps.Profile.UserLicense.Name : '';
+
+    List<SetupEntityAccess> existing = [
+      SELECT Id
+      FROM SetupEntityAccess
+      WHERE SetupEntityType = 'TabSet'
+        AND SetupEntityId = :applicationId
+        AND ParentId = :ps.Id
+      LIMIT 1
+    ];
+    if (!existing.isEmpty()) {
+      return new AdminSecurityDataModel.DmlResult(true, 'Profile ' + ps.Profile.Name + ' already has access to this app.', existing[0].Id);
+    }
+
+    // Pre-validate Guest User License restrictions on Standard Apps
+    if (licenseName.toLowerCase().contains('guest')) {
+      Boolean isStandard = false;
+      List<AppMenuItem> apps = [
+        SELECT Id, NamespacePrefix 
+        FROM AppMenuItem 
+        WHERE ApplicationId = :applicationId OR Id = :applicationId 
+        LIMIT 1
+      ];
+      if (!apps.isEmpty() && apps[0].NamespacePrefix == 'standard') {
+        isStandard = true;
+      } else {
+        List<AppDefinition> defs = [
+          SELECT DurableId, DeveloperName 
+          FROM AppDefinition 
+          WHERE DurableId = :applicationId OR DeveloperName = :applicationId 
+          LIMIT 1
+        ];
+        if (!defs.isEmpty() && defs[0].DeveloperName != null && defs[0].DeveloperName.startsWith('standard__')) {
+          isStandard = true;
+        }
+      }
+      if (isStandard) {
+        return new AdminSecurityDataModel.DmlResult(
+          false,
+          'Profile "' + ps.Profile.Name + '" cannot be assigned because Salesforce does not permit profiles with the ' + licenseName + ' to access standard applications (license limit: 0 standard apps).'
+        );
+      }
+    }
+
+    try {
+      SetupEntityAccess sea = new SetupEntityAccess(
+        ParentId = ps.Id,
+        SetupEntityId = (Id)applicationId
+      );
+      insert sea;
+      return new AdminSecurityDataModel.DmlResult(true, 'Profile ' + ps.Profile.Name + ' assigned to App successfully.', sea.Id);
+    } catch (Exception ex) {
+      String friendlyMsg = cleanExceptionMessage(ex, ps.Profile.Name, licenseName);
+      return new AdminSecurityDataModel.DmlResult(false, friendlyMsg);
+    }
+  }
+
+  /**
+   * @description Remove profile access from an application
+   */
+  public static AdminSecurityDataModel.DmlResult removeProfileFromApp(
+    String applicationId,
+    String profileId
+  ) {
+    verifyAdminAccess();
+
+    if (String.isBlank(applicationId) || String.isBlank(profileId)) {
+      return new AdminSecurityDataModel.DmlResult(false, 'Application ID and Profile ID are required.');
+    }
+
+    if (applicationId.startsWith('06m') && applicationId.length() >= 15) {
+      applicationId = '02u' + applicationId.substring(3);
+    }
+
+    List<PermissionSet> permSets = [
+      SELECT Id, Profile.Name, Profile.UserLicense.Name
+      FROM PermissionSet
+      WHERE ProfileId = :profileId AND IsOwnedByProfile = true
+      LIMIT 1
+    ];
+    if (permSets.isEmpty()) {
+      return new AdminSecurityDataModel.DmlResult(false, 'Profile permission set not found.');
+    }
+    PermissionSet ps = permSets[0];
+    String licenseName = (ps.Profile != null && ps.Profile.UserLicense != null) ? ps.Profile.UserLicense.Name : '';
+
+    List<SetupEntityAccess> existing = [
+      SELECT Id
+      FROM SetupEntityAccess
+      WHERE SetupEntityType = 'TabSet'
+        AND SetupEntityId = :applicationId
+        AND ParentId = :ps.Id
+      LIMIT 1
+    ];
+    if (existing.isEmpty()) {
+      return new AdminSecurityDataModel.DmlResult(true, 'Profile ' + ps.Profile.Name + ' does not have access.');
+    }
+
+    try {
+      delete existing[0];
+      return new AdminSecurityDataModel.DmlResult(true, 'Access for ' + ps.Profile.Name + ' removed successfully.');
+    } catch (Exception ex) {
+      String friendlyMsg = cleanExceptionMessage(ex, ps.Profile.Name, licenseName);
+      return new AdminSecurityDataModel.DmlResult(false, friendlyMsg);
+    }
   }
 
   // =========================================================================

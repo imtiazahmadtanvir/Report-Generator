@@ -15,6 +15,10 @@ import getProfileDetail from "@salesforce/apex/AdminAccessController.getProfileD
 import getObjectPermissionsForTarget from "@salesforce/apex/AdminAccessController.getObjectPermissionsForTarget";
 import getFieldPermissionsForTarget from "@salesforce/apex/AdminAccessController.getFieldPermissionsForTarget";
 import getAppAccessList from "@salesforce/apex/AdminAccessController.getAppAccessList";
+import getAppDetail from "@salesforce/apex/AdminAccessController.getAppDetail";
+import getAppObjectFields from "@salesforce/apex/AdminAccessController.getAppObjectFields";
+import assignProfileToApp from "@salesforce/apex/AdminAccessController.assignProfileToApp";
+import removeProfileFromApp from "@salesforce/apex/AdminAccessController.removeProfileFromApp";
 import getAccessibleObjects from "@salesforce/apex/AdminAccessController.getAccessibleObjects";
 import getUserOptions from "@salesforce/apex/AdminAccessController.getUserOptions";
 
@@ -144,7 +148,25 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
   // SECTION 7: APPS STATE
   @track appSearchTerm = "";
+  @track appTypeFilter = "All";
+  @track appNavFilter = "All";
+  @track allAppsList = [];
   @track appsList = [];
+  @track filteredAppsList = [];
+  @track isAppsLoading = false;
+  @track selectedApp = null;
+  @track selectedAppDetail = null;
+  @track isAppDetailLoading = false;
+  @track appTabSearchTerm = "";
+  @track appObjectSearchTerm = "";
+  @track appProfileSearchTerm = "";
+  @track appProfileFilter = "All";
+  @track selectedAppTab = "tabs";
+  @track activeObjectFields = null;
+  @track activeObjectForFields = null;
+  @track isLoadingObjectFields = false;
+  @track showObjectFieldsModal = false;
+  @track objectFieldSearchTerm = "";
 
   // MODALS & CONFIRMATION DIALOGS
   @track showConfirmModal = false;
@@ -210,7 +232,8 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
         this.loadGroups(),
         this.loadProfiles(),
         this.loadObjects(),
-        this.loadUserOptions()
+        this.loadUserOptions(),
+        this.loadApps()
       ]);
     } catch (error) {
       this.showToast("Error", this.extractErrorMessage(error), "error");
@@ -372,14 +395,478 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
   }
 
   async loadApps() {
-    const apps = await getAppAccessList({ searchTerm: this.appSearchTerm });
-    this.appsList = (apps || []).map((app) => ({
-      ...app,
-      visibleClass: app.isVisible ? "badge-active" : "badge-inactive",
-      visibleLabel: app.isVisible ? "Visible" : "Hidden",
-      accessibleClass: app.isAccessible ? "badge-active" : "badge-inactive",
-      accessibleLabel: app.isAccessible ? "Accessible" : "Restricted"
-    }));
+    this.isAppsLoading = true;
+    try {
+      const apps = await getAppAccessList({ searchTerm: "" });
+      this.allAppsList = (apps || []).map((app) => ({
+        ...app,
+        typeBadgeClass: app.isCustom ? "badge-custom" : "badge-standard",
+        typeBadgeLabel: app.isCustom ? "Custom" : "Standard",
+        avatarStyle: `background-color: ${app.headerColor || "#0176D3"};`,
+        visibleClass: app.isVisible ? "badge-active" : "badge-inactive",
+        visibleLabel: app.isVisible ? "Visible" : "Hidden",
+        accessibleClass: app.isAccessible ? "badge-active" : "badge-inactive",
+        accessibleLabel: app.isAccessible ? "Accessible" : "Restricted"
+      }));
+      this.applyAppFilters();
+    } catch (err) {
+      console.error("Error loading apps", err);
+      this.showToast("Error", this.extractErrorMessage(err), "error");
+    } finally {
+      this.isAppsLoading = false;
+    }
+  }
+
+  get appTypeOptions() {
+    return [
+      { label: "All Types", value: "All" },
+      { label: "Custom Apps", value: "Custom" },
+      { label: "Standard Apps", value: "Standard" }
+    ];
+  }
+
+  get appNavOptions() {
+    return [
+      { label: "All Navigation Types", value: "All" },
+      { label: "Standard Navigation", value: "Standard" },
+      { label: "Console Navigation", value: "Console" }
+    ];
+  }
+
+  handleAppTypeFilter(event) {
+    this.appTypeFilter = event.detail.value;
+    this.applyAppFilters();
+  }
+
+  handleAppNavFilter(event) {
+    this.appNavFilter = event.detail.value;
+    this.applyAppFilters();
+  }
+
+  handleAppSearch(event) {
+    this.appSearchTerm = event.target.value;
+    this.applyAppFilters();
+  }
+
+  applyAppFilters() {
+    if (!this.allAppsList) {
+      this.filteredAppsList = [];
+      this.appsList = [];
+      return;
+    }
+    const term = (this.appSearchTerm || "").toLowerCase().trim();
+    this.filteredAppsList = this.allAppsList.filter((app) => {
+      if (this.appTypeFilter === "Custom" && !app.isCustom) return false;
+      if (this.appTypeFilter === "Standard" && app.isCustom) return false;
+
+      if (this.appNavFilter === "Console" && app.navType !== "Console") return false;
+      if (this.appNavFilter === "Standard" && app.navType !== "Standard") return false;
+
+      if (term) {
+        const label = (app.label || "").toLowerCase();
+        const devName = (app.developerName || "").toLowerCase();
+        const desc = (app.description || "").toLowerCase();
+        return (
+          label.includes(term) ||
+          devName.includes(term) ||
+          desc.includes(term)
+        );
+      }
+      return true;
+    });
+    this.appsList = this.filteredAppsList;
+  }
+
+  get filteredAppsCount() {
+    return this.filteredAppsList ? this.filteredAppsList.length : 0;
+  }
+
+  get totalAppsCount() {
+    return this.allAppsList ? this.allAppsList.length : 0;
+  }
+
+  get isFilteredAppsEmpty() {
+    return !this.filteredAppsList || this.filteredAppsList.length === 0;
+  }
+
+  get isAppDetailView() {
+    return Boolean(this.selectedApp);
+  }
+
+  get isAppListView() {
+    return !this.selectedApp;
+  }
+
+  async handleSelectApp(event) {
+    let appId;
+    if (typeof event === "string") {
+      appId = event;
+    } else if (event && event.currentTarget) {
+      appId = event.currentTarget.dataset.id || event.currentTarget.getAttribute("data-id");
+    } else if (event && event.target) {
+      appId = event.target.dataset.id || event.target.getAttribute("data-id");
+    }
+
+    if (!appId) {
+      console.warn("handleSelectApp: missing appId from click event", event);
+      return;
+    }
+
+    const selected = (this.allAppsList || []).find(
+      (a) => a.id === appId || a.applicationId === appId || a.appDefinitionId === appId
+    );
+    if (!selected) {
+      console.warn("handleSelectApp: app not found for id", appId);
+      return;
+    }
+
+    this.selectedApp = selected;
+    this.selectedAppDetail = null;
+    this.selectedAppTab = "tabs";
+    this.appTabSearchTerm = "";
+    this.appObjectSearchTerm = "";
+    this.appProfileSearchTerm = "";
+    this.appProfileFilter = "All";
+    await this.loadAppDetail(selected.applicationId, selected.appDefinitionId);
+  }
+
+  async loadAppDetail(applicationId, appDefinitionId) {
+    this.isAppDetailLoading = true;
+    try {
+      const detail = await getAppDetail({
+        applicationId: applicationId,
+        appDefinitionId: appDefinitionId
+      });
+      if (detail && detail.objects) {
+        detail.objects = detail.objects.map((o) => ({
+          ...o,
+          typeBadgeClass: o.isCustom ? "badge-custom" : "badge-standard",
+          typeBadgeLabel: o.isCustom ? "Custom Object" : "Standard Object",
+          usedInTabsFormatted: (o.usedInTabs || []).join(", ")
+        }));
+      }
+      if (detail && detail.tabs) {
+        detail.tabs = detail.tabs.map((t) => ({
+          ...t,
+          typeBadgeClass: t.isCustom ? "badge-custom" : "badge-standard",
+          typeBadgeLabel: t.isCustom ? "Custom Tab" : "Standard Tab"
+        }));
+      }
+      this.selectedAppDetail = detail;
+    } catch (err) {
+      console.error("Error loading app detail", err);
+      this.showToast(
+        "Error Loading App Detail",
+        this.extractErrorMessage(err),
+        "error"
+      );
+    } finally {
+      this.isAppDetailLoading = false;
+    }
+  }
+
+  handleBackToAppsList() {
+    this.selectedApp = null;
+    this.selectedAppDetail = null;
+    this.appTabSearchTerm = "";
+    this.appObjectSearchTerm = "";
+    this.appProfileSearchTerm = "";
+    this.activeObjectFields = null;
+    this.showObjectFieldsModal = false;
+  }
+
+  handleAppDetailSubTab(event) {
+    this.selectedAppTab = event.currentTarget.dataset.tab;
+  }
+
+  get isAppTabsSubTab() {
+    return this.selectedAppTab === "tabs";
+  }
+
+  get isAppObjectsSubTab() {
+    return this.selectedAppTab === "objects";
+  }
+
+  get isAppProfilesSubTab() {
+    return this.selectedAppTab === "profiles";
+  }
+
+  get appTabsTabClass() {
+    return this.selectedAppTab === "tabs"
+      ? "slds-tabs_default__item slds-is-active"
+      : "slds-tabs_default__item";
+  }
+
+  get appObjectsTabClass() {
+    return this.selectedAppTab === "objects"
+      ? "slds-tabs_default__item slds-is-active"
+      : "slds-tabs_default__item";
+  }
+
+  get appProfilesTabClass() {
+    return this.selectedAppTab === "profiles"
+      ? "slds-tabs_default__item slds-is-active"
+      : "slds-tabs_default__item";
+  }
+
+  get appDetailTabsCount() {
+    return this.selectedAppDetail && this.selectedAppDetail.tabs
+      ? this.selectedAppDetail.tabs.length
+      : 0;
+  }
+
+  get appDetailObjectsCount() {
+    return this.selectedAppDetail && this.selectedAppDetail.objects
+      ? this.selectedAppDetail.objects.length
+      : 0;
+  }
+
+  get selectedAppDetailProfilesCount() {
+    return this.selectedAppDetail && this.selectedAppDetail.profiles
+      ? this.selectedAppDetail.profiles.length
+      : 0;
+  }
+
+  handleAppTabSearch(event) {
+    this.appTabSearchTerm = event.target.value;
+  }
+
+  get filteredAppTabs() {
+    if (!this.selectedAppDetail || !this.selectedAppDetail.tabs) return [];
+    if (!this.appTabSearchTerm || this.appTabSearchTerm.trim() === "") {
+      return this.selectedAppDetail.tabs;
+    }
+    const term = this.appTabSearchTerm.toLowerCase().trim();
+    return this.selectedAppDetail.tabs.filter((t) => {
+      const label = (t.tabLabel || "").toLowerCase();
+      const name = (t.tabName || "").toLowerCase();
+      const sObj = (t.sobjectLabel || "").toLowerCase();
+      const sObjName = (t.sobjectName || "").toLowerCase();
+      return (
+        label.includes(term) ||
+        name.includes(term) ||
+        sObj.includes(term) ||
+        sObjName.includes(term)
+      );
+    });
+  }
+
+  get isFilteredTabsEmpty() {
+    return !this.filteredAppTabs || this.filteredAppTabs.length === 0;
+  }
+
+  handleAppObjectSearch(event) {
+    this.appObjectSearchTerm = event.target.value;
+  }
+
+  get filteredAppObjects() {
+    if (!this.selectedAppDetail || !this.selectedAppDetail.objects) return [];
+    if (!this.appObjectSearchTerm || this.appObjectSearchTerm.trim() === "") {
+      return this.selectedAppDetail.objects;
+    }
+    const term = this.appObjectSearchTerm.toLowerCase().trim();
+    return this.selectedAppDetail.objects.filter((o) => {
+      const label = (o.label || "").toLowerCase();
+      const name = (o.apiName || "").toLowerCase();
+      return label.includes(term) || name.includes(term);
+    });
+  }
+
+  get isFilteredObjectsEmpty() {
+    return !this.filteredAppObjects || this.filteredAppObjects.length === 0;
+  }
+
+  get appProfileFilterOptions() {
+    return [
+      { label: "All Profiles", value: "All" },
+      { label: "Assigned (Access Granted)", value: "Assigned" },
+      { label: "Unassigned (No Access)", value: "Unassigned" },
+      { label: "License Restricted", value: "Restricted" }
+    ];
+  }
+
+  handleAppProfileSearch(event) {
+    this.appProfileSearchTerm = event.target.value;
+  }
+
+  handleAppProfileFilter(event) {
+    this.appProfileFilter = event.detail.value;
+  }
+
+  get filteredAppProfiles() {
+    if (!this.selectedAppDetail || !this.selectedAppDetail.profiles) return [];
+    const isAppCustom = this.selectedAppDetail.app && this.selectedAppDetail.app.isCustom;
+    return this.selectedAppDetail.profiles
+      .map((p) => {
+        const isGuest = p.userLicenseName && (
+          p.userLicenseName.toLowerCase().includes("guest") ||
+          p.userLicenseName.toLowerCase().includes("chatter free")
+        );
+        const isRestricted = p.isRestricted || (!p.hasAccess && !isAppCustom && isGuest);
+        const restrictionReason = p.restrictionReason || (isRestricted
+          ? `${p.userLicenseName} profiles cannot access standard Salesforce applications.`
+          : "");
+        return {
+          ...p,
+          isRestricted,
+          restrictionReason
+        };
+      })
+      .filter((p) => {
+        if (this.appProfileFilter === "Assigned" && !p.hasAccess) return false;
+        if (this.appProfileFilter === "Unassigned" && (p.hasAccess || p.isRestricted)) return false;
+        if (this.appProfileFilter === "Restricted" && !p.isRestricted) return false;
+
+        if (this.appProfileSearchTerm && this.appProfileSearchTerm.trim() !== "") {
+          const term = this.appProfileSearchTerm.toLowerCase().trim();
+          const name = (p.profileName || "").toLowerCase();
+          const license = (p.userLicenseName || "").toLowerCase();
+          return name.includes(term) || license.includes(term);
+        }
+        return true;
+      });
+  }
+
+  get isFilteredProfilesEmpty() {
+    return !this.filteredAppProfiles || this.filteredAppProfiles.length === 0;
+  }
+
+  async handleToggleAppProfileAccess(event) {
+    const profileId = event.currentTarget.dataset.profileId;
+    const isChecked = event.target.checked;
+    const profile = (this.selectedAppDetail.profiles || []).find(
+      (p) => p.profileId === profileId
+    );
+    if (!profile) return;
+
+    if (isChecked && profile.isRestricted) {
+      event.target.checked = false;
+      this.showToast(
+        "Assignment Restricted",
+        profile.restrictionReason || "This profile cannot be assigned to standard applications due to Salesforce license limits.",
+        "warning"
+      );
+      return;
+    }
+
+    const appId =
+      (this.selectedAppDetail.app &&
+        this.selectedAppDetail.app.applicationId) ||
+      this.selectedApp.applicationId;
+    this.isLoading = true;
+
+    try {
+      let result;
+      if (isChecked) {
+        result = await assignProfileToApp({
+          applicationId: appId,
+          profileId: profileId
+        });
+      } else {
+        result = await removeProfileFromApp({
+          applicationId: appId,
+          profileId: profileId
+        });
+      }
+
+      if (result.success) {
+        profile.hasAccess = isChecked;
+        const currentCount =
+          this.selectedAppDetail.totalProfilesWithAccess || 0;
+        const newCount = isChecked
+          ? currentCount + 1
+          : Math.max(0, currentCount - 1);
+        this.selectedAppDetail.totalProfilesWithAccess = newCount;
+        if (this.selectedAppDetail.app) {
+          this.selectedAppDetail.app.profilesCount = newCount;
+        }
+        const appInAll = (this.allAppsList || []).find(
+          (a) => a.id === this.selectedApp.id || a.applicationId === appId
+        );
+        if (appInAll) {
+          appInAll.profilesCount = newCount;
+        }
+        const appInList = (this.appsList || []).find(
+          (a) => a.id === this.selectedApp.id || a.applicationId === appId
+        );
+        if (appInList) {
+          appInList.profilesCount = newCount;
+        }
+        this.selectedAppDetail = { ...this.selectedAppDetail };
+        this.showToast(
+          isChecked ? "Profile Assigned" : "Access Removed",
+          result.message ||
+            (isChecked
+              ? `Granted access to ${profile.profileName}`
+              : `Removed access for ${profile.profileName}`),
+          "success"
+        );
+      } else {
+        event.target.checked = !isChecked;
+        this.showToast("Assignment Not Allowed", result.message, "error");
+      }
+    } catch (err) {
+      event.target.checked = !isChecked;
+      console.error("Error updating profile app access", err);
+      this.showToast("Error", this.extractErrorMessage(err), "error");
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  async handleViewObjectFields(event) {
+    const objApiName = event.currentTarget.dataset.object;
+    const objLabel = event.currentTarget.dataset.label || objApiName;
+    this.activeObjectForFields = { apiName: objApiName, label: objLabel };
+    this.showObjectFieldsModal = true;
+    this.isLoadingObjectFields = true;
+    this.objectFieldSearchTerm = "";
+    try {
+      const fields = await getAppObjectFields({ sobjectType: objApiName });
+      this.activeObjectFields = (fields || []).map((f) => ({
+        ...f,
+        typeBadgeClass: f.isCustom ? "badge-custom" : "badge-standard",
+        typeBadgeLabel: f.isCustom ? "Custom" : "Standard"
+      }));
+    } catch (err) {
+      console.error("Error loading object fields", err);
+      this.showToast("Error", this.extractErrorMessage(err), "error");
+      this.activeObjectFields = [];
+    } finally {
+      this.isLoadingObjectFields = false;
+    }
+  }
+
+  handleCloseObjectFieldsModal() {
+    this.showObjectFieldsModal = false;
+    this.activeObjectForFields = null;
+    this.activeObjectFields = null;
+    this.objectFieldSearchTerm = "";
+  }
+
+  handleObjectFieldSearch(event) {
+    this.objectFieldSearchTerm = event.target.value;
+  }
+
+  get filteredObjectFields() {
+    if (!this.activeObjectFields) return [];
+    if (
+      !this.objectFieldSearchTerm ||
+      this.objectFieldSearchTerm.trim() === ""
+    ) {
+      return this.activeObjectFields;
+    }
+    const term = this.objectFieldSearchTerm.toLowerCase().trim();
+    return this.activeObjectFields.filter(
+      (f) =>
+        (f.label && f.label.toLowerCase().includes(term)) ||
+        (f.apiName && f.apiName.toLowerCase().includes(term)) ||
+        (f.dataType && f.dataType.toLowerCase().includes(term))
+    );
+  }
+
+  get isFilteredObjectFieldsEmpty() {
+    return !this.filteredObjectFields || this.filteredObjectFields.length === 0;
   }
 
   async loadUserOptions() {
@@ -1592,6 +2079,12 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
         icon: "utility:groups"
       },
       {
+        name: "apps",
+        value: "apps",
+        label: "Apps",
+        icon: "utility:apps"
+      },
+      {
         name: "objects",
         value: "objects",
         label: "Object Access",
@@ -2041,8 +2534,33 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
   extractErrorMessage(error) {
     if (!error) return "Unknown error occurred.";
-    if (error.body && error.body.message) return error.body.message;
-    if (error.message) return error.message;
-    return JSON.stringify(error);
+    let msg = "";
+    if (error.body && error.body.message) {
+      msg = error.body.message;
+    } else if (error.message) {
+      msg = error.message;
+    } else {
+      msg = JSON.stringify(error);
+    }
+
+    if (msg.includes("TABSET_LIMIT_EXCEEDED")) {
+      return "This profile cannot be assigned to this application because its license does not permit access to standard Salesforce applications (license limit: 0 standard apps).";
+    }
+
+    if (msg.includes("first error:")) {
+      let sub = msg.substring(msg.indexOf("first error:") + 12).trim();
+      const commaIdx = sub.indexOf(",");
+      if (commaIdx !== -1 && commaIdx < 40) {
+        sub = sub.substring(commaIdx + 1).trim();
+      }
+      if (sub.endsWith(": []")) {
+        sub = sub.substring(0, sub.length - 4).trim();
+      } else if (sub.endsWith("[]")) {
+        sub = sub.substring(0, sub.length - 2).trim();
+      }
+      if (sub) return sub;
+    }
+
+    return msg;
   }
 }

@@ -1956,83 +1956,525 @@
           </template>
 
           <!-- ---------------------------------------------------------- -->
-          <!-- TAB 7: APPS                                                -->
+          <!-- TAB 4: APPS (MANAGEMENT & DETAIL)                           -->
           <!-- ---------------------------------------------------------- -->
           <template lwc:if={isAppsTab}>
-            <div class="section-toolbar">
-              <div class="search-input-box">
-                <lightning-input
-                  type="search"
-                  label="Search Apps"
-                  variant="label-hidden"
-                  placeholder="Search Applications by Name or Label..."
-                  value={appSearchTerm}
-                  onchange={handleAppSearch}
-                ></lightning-input>
+            <!-- VIEW A: APPS LIST VIEW (WHEN NO APP SELECTED) -->
+            <template lwc:if={isAppListView}>
+              <div class="section-toolbar">
+                <div class="toolbar-filters">
+                  <div class="search-input-box">
+                    <lightning-input
+                      type="search"
+                      label="Search Apps"
+                      variant="label-hidden"
+                      placeholder="Search by App Name, Developer Name, or Description..."
+                      value={appSearchTerm}
+                      onchange={handleAppSearch}
+                    ></lightning-input>
+                  </div>
+                  <div class="filter-combo-box">
+                    <lightning-combobox
+                      label="Filter Type"
+                      variant="label-hidden"
+                      placeholder="Filter Type"
+                      value={appTypeFilter}
+                      options={appTypeOptions}
+                      onchange={handleAppTypeFilter}
+                    ></lightning-combobox>
+                  </div>
+                  <div class="filter-combo-box">
+                    <lightning-combobox
+                      label="Navigation Type"
+                      variant="label-hidden"
+                      placeholder="Navigation Type"
+                      value={appNavFilter}
+                      options={appNavOptions}
+                      onchange={handleAppNavFilter}
+                    ></lightning-combobox>
+                  </div>
+                </div>
+                <div class="toolbar-actions">
+                  <span class="slds-text-body_small slds-text-color_weak slds-m-right_small">
+                    Showing {filteredAppsCount} of {totalAppsCount} App(s)
+                  </span>
+                </div>
               </div>
-              <div class="toolbar-actions">
-                <span class="slds-text-body_small slds-text-color_weak">
-                  Showing {appsList.length} App(s)
-                </span>
-              </div>
-            </div>
 
-            <div class="styled-table-container">
-              <table class="custom-data-table resp-list">
-                <thead>
-                  <tr>
-                    <th>App Label</th>
-                    <th>Developer Name</th>
-                    <th>Type</th>
-                    <th>Visibility</th>
-                    <th>Accessible</th>
-                    <th>Profiles with Access</th>
-                    <th>Perm Sets with Access</th>
-                    <th class="slds-text-align_right">Setup</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <template for:each={appsList} for:item="app">
-                    <tr key={app.id}>
-                      <td data-label="App Label">
-                        <strong>{app.label}</strong>
-                      </td>
-                      <td data-label="Developer Name">
-                        <code>{app.developerName}</code>
-                      </td>
-                      <td data-label="Type">
-                        <span class="slds-badge slds-theme_shade"
-                          >{app.type}</span
-                        >
-                      </td>
-                      <td data-label="Visibility">
-                        <span class={app.visibleClass}>{app.visibleLabel}</span>
-                      </td>
-                      <td data-label="Accessible">
-                        <span class={app.accessibleClass}
-                          >{app.accessibleLabel}</span
-                        >
-                      </td>
-                      <td data-label="Profiles with Access">
-                        <span class="badge-count">{app.profilesCount}</span>
-                      </td>
-                      <td data-label="Perm Sets with Access">
-                        <span class="badge-count">{app.permSetsCount}</span>
-                      </td>
-                      <td data-label="Setup" class="slds-text-align_right">
-                        <a
-                          href={app.setupUrl}
-                          target="_blank"
-                          class="slds-button slds-button_neutral slds-button_small"
-                        >
-                          App Manager
-                        </a>
-                      </td>
+              <div class="styled-table-container">
+                <table class="custom-data-table resp-list">
+                  <thead>
+                    <tr>
+                      <th>Application</th>
+                      <th>Developer Name</th>
+                      <th>Type</th>
+                      <th>Navigation</th>
+                      <th class="slds-text-align_center">Profiles with Access</th>
+                      <th class="slds-text-align_center">Permission Sets</th>
                     </tr>
-                  </template>
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    <template for:each={filteredAppsList} for:item="app">
+                      <tr key={app.id}>
+                        <td data-label="Application">
+                          <button
+                            class="link-name"
+                            data-id={app.id}
+                            onclick={handleSelectApp}
+                            title="Click to view tabs, objects, and assign profiles"
+                          >
+                            {app.label}
+                          </button>
+                          <div class="slds-text-body_small slds-text-color_weak slds-truncate" title={app.description}>
+                            {app.description}
+                          </div>
+                        </td>
+                        <td data-label="Developer Name">
+                          <code>{app.developerName}</code>
+                        </td>
+                        <td data-label="Type">
+                          <span class={app.typeBadgeClass}>{app.typeBadgeLabel}</span>
+                        </td>
+                        <td data-label="Navigation">
+                          <span class="slds-badge slds-theme_light">{app.navType}</span>
+                        </td>
+                        <td data-label="Profiles with Access" class="slds-text-align_center">
+                          <span class="badge-count">{app.profilesCount}</span>
+                        </td>
+                        <td data-label="Permission Sets" class="slds-text-align_center">
+                          <span class="badge-count">{app.permSetsCount}</span>
+                        </td>
+                      </tr>
+                    </template>
+                    <template lwc:if={isFilteredAppsEmpty}>
+                      <tr>
+                        <td colspan="6" class="empty-state-cell">
+                          <div class="slds-text-align_center slds-p-around_large">
+                            <lightning-icon icon-name="utility:search" size="medium" class="slds-m-bottom_small"></lightning-icon>
+                            <p class="slds-text-heading_small">No applications found</p>
+                            <p class="slds-text-color_weak">Try changing your search keyword or filter options.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </template>
+
+            <!-- VIEW B: APP DETAIL VIEW (WHEN APP SELECTED) -->
+            <template lwc:if={isAppDetailView}>
+              <div class="slds-page-header slds-page-header_record-home detail-header">
+                <div class="slds-page-header__row">
+                  <div class="slds-page-header__col-title">
+                    <div class="slds-media">
+                      <div class="slds-media__figure">
+                        <lightning-icon
+                          icon-name="standard:apps"
+                          size="medium"
+                          alternative-text="Application"
+                        ></lightning-icon>
+                      </div>
+                      <div class="slds-media__body">
+                        <div class="slds-page-header__name">
+                          <div class="slds-page-header__name-title">
+                            <h1>
+                              <span>Application Overview & Access</span>
+                              <span class="slds-page-header__title slds-truncate" title={selectedApp.label}>
+                                {selectedApp.label}
+                              </span>
+                            </h1>
+                          </div>
+                        </div>
+                        <div class="slds-page-header__name-meta slds-m-top_xx-small">
+                          <code>{selectedApp.developerName}</code>
+                          <span class="slds-m-horizontal_xx-small">•</span>
+                          <span class={selectedApp.typeBadgeClass}>{selectedApp.typeBadgeLabel}</span>
+                          <span class="slds-m-horizontal_xx-small">•</span>
+                          <span>Nav: {selectedApp.navType}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="slds-page-header__col-actions">
+                    <div class="slds-page-header__controls">
+                      <div class="slds-page-header__control">
+                        <lightning-button
+                          icon-name="utility:back"
+                          label="Back to Apps"
+                          onclick={handleBackToAppsList}
+                        ></lightning-button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- KEY METRICS BANNER -->
+                <template lwc:if={selectedAppDetail}>
+                  <div class="detail-kpi-bar slds-m-top_small">
+                    <div class="kpi-pill" data-tab="tabs" onclick={handleAppDetailSubTab} style="cursor: pointer;" title="Click to view Navigation Tabs">
+                      <lightning-icon icon-name="utility:tabset" size="x-small" class="slds-m-right_xx-small"></lightning-icon>
+                      <span><strong>{selectedAppDetail.totalTabs}</strong> Included Tabs</span>
+                    </div>
+                    <div class="kpi-pill" data-tab="objects" onclick={handleAppDetailSubTab} style="cursor: pointer;" title="Click to view Objects">
+                      <lightning-icon icon-name="utility:database" size="x-small" class="slds-m-right_xx-small"></lightning-icon>
+                      <span><strong>{selectedAppDetail.totalObjects}</strong> Objects Exposed</span>
+                    </div>
+                    <div class="kpi-pill kpi-pill_highlight" data-tab="profiles" onclick={handleAppDetailSubTab} style="cursor: pointer;" title="Click to view Profile Access">
+                      <lightning-icon icon-name="utility:user_role" size="x-small" class="slds-m-right_xx-small"></lightning-icon>
+                      <span><strong>{selectedAppDetail.totalProfilesWithAccess}</strong> Profiles with Direct Access</span>
+                    </div>
+                  </div>
+                </template>
+              </div>
+
+              <!-- APP DETAIL LOADING SPINNER -->
+              <template lwc:if={isAppDetailLoading}>
+                <div class="slds-p-around_xx-large slds-text-align_center" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; margin-top:1rem; position:relative; min-height:200px;">
+                  <lightning-spinner alternative-text="Loading application details..." size="medium"></lightning-spinner>
+                  <p class="slds-text-heading_small slds-text-color_weak" style="padding-top:60px;">Loading application tabs, objects, and profile permissions...</p>
+                </div>
+              </template>
+              <template lwc:else>
+                <!-- APP DETAIL SUB-TABS -->
+                <div class="app-subtabs-container slds-m-top_medium">
+                  <div class="slds-tabs_default">
+                    <ul class="slds-tabs_default__nav" role="tablist">
+                      <li
+                        class={appTabsTabClass}
+                        title="Navigation items and tabs displayed in this app"
+                        role="presentation"
+                      >
+                        <a
+                          class="slds-tabs_default__link"
+                          href="javascript:void(0);"
+                          role="tab"
+                          data-tab="tabs"
+                          onclick={handleAppDetailSubTab}
+                        >
+                          <lightning-icon icon-name="utility:tabset" size="x-small" class="slds-m-right_xx-small"></lightning-icon>
+                          Navigation Tabs ({appDetailTabsCount})
+                        </a>
+                      </li>
+                      <li
+                        class={appObjectsTabClass}
+                        title="Database objects used in this app"
+                        role="presentation"
+                      >
+                        <a
+                          class="slds-tabs_default__link"
+                          href="javascript:void(0);"
+                          role="tab"
+                          data-tab="objects"
+                          onclick={handleAppDetailSubTab}
+                        >
+                          <lightning-icon icon-name="utility:database" size="x-small" class="slds-m-right_xx-small"></lightning-icon>
+                          Objects ({appDetailObjectsCount})
+                        </a>
+                      </li>
+                      <li
+                        class={appProfilesTabClass}
+                        title="Manage Profile Access"
+                        role="presentation"
+                      >
+                        <a
+                          class="slds-tabs_default__link"
+                          href="javascript:void(0);"
+                          role="tab"
+                          data-tab="profiles"
+                          onclick={handleAppDetailSubTab}
+                        >
+                          <lightning-icon icon-name="utility:user_role" size="x-small" class="slds-m-right_xx-small"></lightning-icon>
+                          Profile Access ({selectedAppDetailProfilesCount})
+                        </a>
+                      </li>
+                    </ul>
+
+                    <!-- SUB-TAB CONTENT 1: NAVIGATION TABS -->
+                    <template lwc:if={isAppTabsSubTab}>
+                      <div class="slds-p-around_medium detail-subtab-body">
+                        <div class="section-toolbar" style="margin-bottom: 1rem;">
+                          <div class="toolbar-filters">
+                            <div class="search-input-box">
+                              <lightning-input
+                                type="search"
+                                label="Search Navigation Tabs"
+                                variant="label-hidden"
+                                placeholder="Search Tab Label, Name, or Target..."
+                                value={appTabSearchTerm}
+                                onchange={handleAppTabSearch}
+                              ></lightning-input>
+                            </div>
+                          </div>
+                          <div class="toolbar-actions">
+                            <span class="slds-badge slds-theme_shade count-badge">
+                              Showing {filteredAppTabs.length} of {appDetailTabsCount} Navigation Tabs
+                            </span>
+                          </div>
+                        </div>
+
+                        <div class="styled-table-container">
+                          <table class="custom-data-table">
+                            <thead>
+                              <tr>
+                                <th style="width: 70px;">Order</th>
+                                <th>Tab Label</th>
+                                <th>Tab Name</th>
+                                <th>Type</th>
+                                <th>Target Object / Component</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <template for:each={filteredAppTabs} for:item="tab">
+                                <tr key={tab.id}>
+                                  <td data-label="Order">
+                                    <span class="slds-badge slds-theme_shade">{tab.sortOrder}</span>
+                                  </td>
+                                  <td data-label="Tab Label">
+                                    <strong>{tab.tabLabel}</strong>
+                                  </td>
+                                  <td data-label="Tab Name">
+                                    <code>{tab.tabName}</code>
+                                  </td>
+                                  <td data-label="Type">
+                                    <span class={tab.typeBadgeClass}>
+                                      {tab.typeBadgeLabel}
+                                    </span>
+                                  </td>
+                                  <td data-label="Target">
+                                    <template lwc:if={tab.isObjectTab}>
+                                      <span class="slds-badge slds-theme_light">
+                                        <lightning-icon icon-name="utility:database" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                                        {tab.sobjectLabel} ({tab.sobjectName})
+                                      </span>
+                                    </template>
+                                    <template lwc:else>
+                                      <span class="slds-badge slds-theme_shade">
+                                        <lightning-icon icon-name="utility:custom_apps" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                                        {tab.sobjectLabel}
+                                      </span>
+                                    </template>
+                                  </td>
+                                </tr>
+                              </template>
+                              <template lwc:if={isFilteredTabsEmpty}>
+                                <tr>
+                                  <td colspan="5" class="empty-state-cell">
+                                    No navigation tabs matched your search.
+                                  </td>
+                                </tr>
+                              </template>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </template>
+
+                    <!-- SUB-TAB CONTENT 2: OBJECTS -->
+                    <template lwc:if={isAppObjectsSubTab}>
+                      <div class="slds-p-around_medium detail-subtab-body">
+                        <div class="section-toolbar" style="margin-bottom: 1rem;">
+                          <div class="toolbar-filters">
+                            <div class="search-input-box">
+                              <lightning-input
+                                type="search"
+                                label="Search Objects"
+                                variant="label-hidden"
+                                placeholder="Search Object Label or API Name..."
+                                value={appObjectSearchTerm}
+                                onchange={handleAppObjectSearch}
+                              ></lightning-input>
+                            </div>
+                          </div>
+                          <div class="toolbar-actions">
+                            <span class="slds-badge slds-theme_shade count-badge">
+                              Showing {filteredAppObjects.length} of {appDetailObjectsCount} Objects
+                            </span>
+                          </div>
+                        </div>
+
+                        <div class="styled-table-container">
+                          <table class="custom-data-table">
+                            <thead>
+                              <tr>
+                                <th>Object Label</th>
+                                <th>API Name</th>
+                                <th>Type</th>
+                                <th>Total Fields</th>
+                                <th>Used in Tab(s)</th>
+                                <th class="slds-text-align_right">Fields</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <template for:each={filteredAppObjects} for:item="obj">
+                                <tr key={obj.apiName}>
+                                  <td data-label="Object Label">
+                                    <strong>{obj.label}</strong>
+                                  </td>
+                                  <td data-label="API Name">
+                                    <code>{obj.apiName}</code>
+                                  </td>
+                                  <td data-label="Type">
+                                    <span class={obj.typeBadgeClass}>
+                                      {obj.typeBadgeLabel}
+                                    </span>
+                                  </td>
+                                  <td data-label="Total Fields">
+                                    <span class="badge-count">{obj.fieldCount}</span>
+                                  </td>
+                                  <td data-label="Used in Tab(s)">
+                                    <div class="slds-truncate" title={obj.usedInTabsFormatted}>
+                                      {obj.usedInTabsFormatted}
+                                    </div>
+                                  </td>
+                                  <td data-label="Fields" class="slds-text-align_right">
+                                    <lightning-button
+                                      variant="neutral"
+                                      label="View Fields"
+                                      icon-name="utility:list"
+                                      size="small"
+                                      data-object={obj.apiName}
+                                      data-label={obj.label}
+                                      onclick={handleViewObjectFields}
+                                    ></lightning-button>
+                                  </td>
+                                </tr>
+                              </template>
+                              <template lwc:if={isFilteredObjectsEmpty}>
+                                <tr>
+                                  <td colspan="6" class="empty-state-cell">
+                                    No database objects matched your search.
+                                  </td>
+                                </tr>
+                              </template>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </template>
+
+                    <!-- SUB-TAB CONTENT 2: PROFILE ACCESS ASSIGNMENT -->
+                    <template lwc:if={isAppProfilesSubTab}>
+                      <div class="slds-p-around_medium detail-subtab-body">
+                        <!-- TOOLBAR FOR PROFILES -->
+                        <div class="section-toolbar" style="margin-bottom: 1rem;">
+                          <div class="toolbar-filters">
+                            <div class="search-input-box">
+                              <lightning-input
+                                type="search"
+                                label="Search Profiles"
+                                variant="label-hidden"
+                                placeholder="Search Profile Name or License..."
+                                value={appProfileSearchTerm}
+                                onchange={handleAppProfileSearch}
+                              ></lightning-input>
+                            </div>
+                            <div class="filter-combo-box">
+                              <lightning-combobox
+                                label="Filter Access"
+                                variant="label-hidden"
+                                value={appProfileFilter}
+                                options={appProfileFilterOptions}
+                                onchange={handleAppProfileFilter}
+                              ></lightning-combobox>
+                            </div>
+                          </div>
+                          <div class="toolbar-actions">
+                            <span class="slds-badge slds-theme_shade count-badge">
+                              Showing {filteredAppProfiles.length} of {selectedAppDetailProfilesCount} Profiles
+                            </span>
+                          </div>
+                        </div>
+
+                        <!-- PROFILES TABLE WITH INSTANT ASSIGN / REMOVE TOGGLE -->
+                        <div class="styled-table-container">
+                          <table class="custom-data-table">
+                            <thead>
+                              <tr>
+                                <th>Profile Name</th>
+                                <th>User License</th>
+                                <th>Current Status</th>
+                                <th class="slds-text-align_right">Application Access</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <template for:each={filteredAppProfiles} for:item="prof">
+                                <tr key={prof.profileId}>
+                                  <td data-label="Profile Name">
+                                    <div class="slds-truncate" title={prof.profileName}>
+                                      <strong>{prof.profileName}</strong>
+                                    </div>
+                                    <template lwc:if={prof.isRestricted}>
+                                      <div class="slds-text-body_small slds-m-top_xxx-small" style="color: #b45309;" title={prof.restrictionReason}>
+                                        <lightning-icon icon-name="utility:info_alt" size="xx-small" class="slds-m-right_xxx-small"></lightning-icon>
+                                        {prof.restrictionReason}
+                                      </div>
+                                    </template>
+                                  </td>
+                                  <td data-label="User License">
+                                    <span class="slds-badge slds-theme_light">{prof.userLicenseName}</span>
+                                  </td>
+                                  <td data-label="Current Status">
+                                    <template lwc:if={prof.hasAccess}>
+                                      <span class="slds-badge slds-theme_success">
+                                        <lightning-icon icon-name="utility:check" size="xx-small" variant="inverse" class="slds-m-right_xx-small"></lightning-icon>
+                                        Access Granted
+                                      </span>
+                                    </template>
+                                    <template lwc:else>
+                                      <template lwc:if={prof.isRestricted}>
+                                        <span class="slds-badge slds-theme_warning" title={prof.restrictionReason}>
+                                          <lightning-icon icon-name="utility:lock" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                                          License Restricted
+                                        </span>
+                                      </template>
+                                      <template lwc:else>
+                                        <span class="slds-badge slds-theme_shade">No Access</span>
+                                      </template>
+                                    </template>
+                                  </td>
+                                  <td data-label="Application Access" class="slds-text-align_right">
+                                    <template lwc:if={prof.isRestricted}>
+                                      <lightning-button-icon
+                                        icon-name="utility:lock"
+                                        variant="bare"
+                                        size="medium"
+                                        alternative-text="Restricted by User License"
+                                        title={prof.restrictionReason}
+                                        disabled
+                                      ></lightning-button-icon>
+                                    </template>
+                                    <template lwc:else>
+                                      <lightning-input
+                                        type="toggle"
+                                        label="App Access"
+                                        variant="label-hidden"
+                                        checked={prof.hasAccess}
+                                        data-profile-id={prof.profileId}
+                                        onchange={handleToggleAppProfileAccess}
+                                        message-toggle-active="Granted"
+                                        message-toggle-inactive="Revoked"
+                                      ></lightning-input>
+                                    </template>
+                                  </td>
+                                </tr>
+                              </template>
+                              <template lwc:if={isFilteredProfilesEmpty}>
+                                <tr>
+                                  <td colspan="4" class="empty-state-cell">
+                                    No profiles matched your filter.
+                                  </td>
+                                </tr>
+                              </template>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </template>
           </template>
         </main>
       </div>
@@ -2642,6 +3084,105 @@
           </div>
         </div>
       </div>
+    </template>
+
+    <!-- ============================================================== -->
+    <!-- APP OBJECT FIELDS INSPECTOR MODAL                              -->
+    <!-- ============================================================== -->
+    <template lwc:if={showObjectFieldsModal}>
+      <section
+        role="dialog"
+        tabindex="-1"
+        aria-modal="true"
+        aria-labelledby="fields-modal-heading"
+        class="slds-modal slds-fade-in-open slds-modal_medium"
+      >
+        <div class="slds-modal__container">
+          <div class="slds-modal__header">
+            <h1 id="fields-modal-heading" class="slds-modal__title slds-hyphenate">
+              Fields for {activeObjectForFields.label} ({activeObjectForFields.apiName})
+            </h1>
+            <p class="slds-m-top_x-small slds-text-color_weak slds-text-body_small">
+              Inspect all fields and metadata used by this application's object.
+            </p>
+          </div>
+          <div class="slds-modal__content slds-p-around_medium" style="max-height: 500px; overflow-y: auto;">
+            <div class="slds-m-bottom_small">
+              <lightning-input
+                type="search"
+                label="Search Fields"
+                variant="label-hidden"
+                placeholder="Search fields by name, API name, or data type..."
+                value={objectFieldSearchTerm}
+                onchange={handleObjectFieldSearch}
+              ></lightning-input>
+            </div>
+            <template lwc:if={isLoadingObjectFields}>
+              <div class="slds-p-around_large slds-text-align_center">
+                <lightning-spinner alternative-text="Loading fields..." size="small"></lightning-spinner>
+              </div>
+            </template>
+            <template lwc:else>
+              <div class="styled-table-container">
+                <table class="custom-data-table">
+                  <thead>
+                    <tr>
+                      <th>Field Label</th>
+                      <th>API Name</th>
+                      <th>Data Type</th>
+                      <th>Type</th>
+                      <th>Required</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template for:each={filteredObjectFields} for:item="fld">
+                      <tr key={fld.apiName}>
+                        <td data-label="Field Label">
+                          <strong>{fld.label}</strong>
+                        </td>
+                        <td data-label="API Name">
+                          <code>{fld.apiName}</code>
+                        </td>
+                        <td data-label="Data Type">
+                          <span class="slds-badge slds-theme_light">{fld.dataType}</span>
+                        </td>
+                        <td data-label="Type">
+                          <span class={fld.typeBadgeClass}>
+                            {fld.typeBadgeLabel}
+                          </span>
+                        </td>
+                        <td data-label="Required">
+                          <template lwc:if={fld.isRequired}>
+                            <span class="slds-badge slds-theme_error">Required</span>
+                          </template>
+                          <template lwc:else>
+                            <span class="slds-text-color_weak">Optional</span>
+                          </template>
+                        </td>
+                      </tr>
+                    </template>
+                    <template lwc:if={isFilteredObjectFieldsEmpty}>
+                      <tr>
+                        <td colspan="5" class="empty-state-cell">
+                          No fields match your search.
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </template>
+          </div>
+          <div class="slds-modal__footer">
+            <lightning-button
+              variant="neutral"
+              label="Close"
+              onclick={handleCloseObjectFieldsModal}
+            ></lightning-button>
+          </div>
+        </div>
+      </section>
+      <div class="slds-backdrop slds-backdrop_open"></div>
     </template>
   </div>
 </template>

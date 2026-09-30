@@ -1069,3 +1069,71 @@
     position: static;
   }
 }
+
+/* ==========================================================================
+   APP ACCESS & DETAILS STYLES
+   ========================================================================== */
+.clickable-name {
+  color: var(--brand-blue-text, #0176d3);
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clickable-name:hover {
+  text-decoration: underline;
+  color: var(--brand-blue-hover, #015ba5);
+}
+
+.app-avatar-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.detail-kpi-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.kpi-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 20px;
+  font-size: 0.84rem;
+  color: #334155;
+}
+
+.kpi-pill_highlight {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+
+.app-subtabs-container {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.detail-subtab-body {
+  background: #f8fafc;
+}
+
+.count-badge {
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+}

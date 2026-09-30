@@ -349,4 +349,38 @@ private class AdminAccessControllerTest {
 
         Assert.areEqual(4, failures, 'Invalid group create/component requests should raise AuraHandledException');
     }
+
+    @isTest
+    static void testAppAccessAndManagement() {
+        Test.startTest();
+        List<AdminSecurityDataModel.AppAccessSummary> allApps = AdminAccessController.getFilteredAppAccessList('', 'All');
+        List<AdminSecurityDataModel.AppAccessSummary> customApps = AdminAccessController.getFilteredAppAccessList('', 'Custom');
+        List<AdminSecurityDataModel.AppAccessSummary> standardApps = AdminAccessController.getFilteredAppAccessList('', 'Standard');
+        List<AdminSecurityDataModel.AppObjectField> fields = AdminAccessController.getAppObjectFields('Account');
+
+        Assert.isNotNull(allApps, 'All apps should not be null');
+        Assert.isNotNull(customApps, 'Custom apps should not be null');
+        Assert.isNotNull(standardApps, 'Standard apps should not be null');
+        Assert.isNotNull(fields, 'Account fields should not be null');
+        Assert.isTrue(fields.size() > 0, 'Should return fields for Account');
+
+        if (!allApps.isEmpty()) {
+            AdminSecurityDataModel.AppAccessSummary firstApp = allApps[0];
+            AdminSecurityDataModel.AppDetailView detail = AdminAccessController.getAppDetail(firstApp.applicationId, firstApp.appDefinitionId);
+            Assert.isNotNull(detail, 'App detail should not be null');
+            Assert.isNotNull(detail.app, 'App summary in detail should not be null');
+
+            Id profileId = [SELECT Id FROM Profile WHERE UserType = 'Standard' LIMIT 1].Id;
+            AdminSecurityDataModel.DmlResult assignRes = AdminAccessController.assignProfileToApp(firstApp.applicationId, profileId);
+            Assert.isNotNull(assignRes, 'Assign result should not be null');
+            AdminSecurityDataModel.DmlResult removeRes = AdminAccessController.removeProfileFromApp(firstApp.applicationId, profileId);
+            Assert.isNotNull(removeRes, 'Remove result should not be null');
+
+            // Test friendly exception cleaning
+            DmlException fakeEx = new DmlException('Insert failed. First exception on row 0; first error: TABSET_LIMIT_EXCEEDED, Can\'t complete this operation because you reached the limit of 0 of standard apps for 00efj00000DHW41AAH for the Guest User License user license. : []');
+            String cleanMsg = AdminSecurityService.cleanExceptionMessage(fakeEx, 'Guest License User', 'Guest User License');
+            Assert.isTrue(cleanMsg.contains('Guest User License'), 'Should format clean message with license name');
+        }
+        Test.stopTest();
+    }
 }

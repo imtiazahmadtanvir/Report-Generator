@@ -333,6 +333,10 @@ public with sharing class AdminSecurityDataModel {
     @AuraEnabled
     public String id { get; set; }
     @AuraEnabled
+    public String applicationId { get; set; }
+    @AuraEnabled
+    public String appDefinitionId { get; set; }
+    @AuraEnabled
     public String label { get; set; }
     @AuraEnabled
     public String developerName { get; set; }
@@ -344,6 +348,16 @@ public with sharing class AdminSecurityDataModel {
     public Boolean isVisible { get; set; }
     @AuraEnabled
     public Boolean isAccessible { get; set; }
+    @AuraEnabled
+    public Boolean isCustom { get; set; }
+    @AuraEnabled
+    public String navType { get; set; }
+    @AuraEnabled
+    public String headerColor { get; set; }
+    @AuraEnabled
+    public Integer tabCount { get; set; }
+    @AuraEnabled
+    public Integer objectCount { get; set; }
     @AuraEnabled
     public List<String> profilesWithAccess { get; set; }
     @AuraEnabled
@@ -363,6 +377,82 @@ public with sharing class AdminSecurityDataModel {
         return 1;
       return this.label.toLowerCase().compareTo(other.label.toLowerCase());
     }
+  }
+
+  public class AppTabItem implements Comparable {
+    @AuraEnabled public String id { get; set; }
+    @AuraEnabled public Integer sortOrder { get; set; }
+    @AuraEnabled public String tabLabel { get; set; }
+    @AuraEnabled public String tabName { get; set; }
+    @AuraEnabled public String sobjectName { get; set; }
+    @AuraEnabled public String sobjectLabel { get; set; }
+    @AuraEnabled public Boolean isObjectTab { get; set; }
+    @AuraEnabled public Boolean isCustom { get; set; }
+    @AuraEnabled public Integer fieldCount { get; set; }
+
+    public Integer compareTo(Object compareTo) {
+      AppTabItem other = (AppTabItem) compareTo;
+      if (this.sortOrder == null) return -1;
+      if (other.sortOrder == null) return 1;
+      return this.sortOrder - other.sortOrder;
+    }
+  }
+
+  public class AppObjectItem implements Comparable {
+    @AuraEnabled public String apiName { get; set; }
+    @AuraEnabled public String label { get; set; }
+    @AuraEnabled public Boolean isCustom { get; set; }
+    @AuraEnabled public Integer fieldCount { get; set; }
+    @AuraEnabled public List<String> usedInTabs { get; set; }
+
+    public Integer compareTo(Object compareTo) {
+      AppObjectItem other = (AppObjectItem) compareTo;
+      if (this.label == null) return -1;
+      if (other.label == null) return 1;
+      return this.label.toLowerCase().compareTo(other.label.toLowerCase());
+    }
+  }
+
+  public class AppObjectField implements Comparable {
+    @AuraEnabled public String apiName { get; set; }
+    @AuraEnabled public String label { get; set; }
+    @AuraEnabled public String dataType { get; set; }
+    @AuraEnabled public Boolean isCustom { get; set; }
+    @AuraEnabled public Boolean isRequired { get; set; }
+
+    public Integer compareTo(Object compareTo) {
+      AppObjectField other = (AppObjectField) compareTo;
+      if (this.label == null) return -1;
+      if (other.label == null) return 1;
+      return this.label.toLowerCase().compareTo(other.label.toLowerCase());
+    }
+  }
+
+  public class AppProfileAccessItem implements Comparable {
+    @AuraEnabled public String profileId { get; set; }
+    @AuraEnabled public String profileName { get; set; }
+    @AuraEnabled public String userLicenseName { get; set; }
+    @AuraEnabled public String permissionSetId { get; set; }
+    @AuraEnabled public Boolean hasAccess { get; set; }
+    @AuraEnabled public Boolean isRestricted { get; set; }
+    @AuraEnabled public String restrictionReason { get; set; }
+
+    public Integer compareTo(Object compareTo) {
+      AppProfileAccessItem other = (AppProfileAccessItem) compareTo;
+      if (this.profileName == null) return -1;
+      if (other.profileName == null) return 1;
+      return this.profileName.toLowerCase().compareTo(other.profileName.toLowerCase());
+    }
+  }
+
+  public class AppDetailView {
+    @AuraEnabled public AppAccessSummary app { get; set; }
+    @AuraEnabled public List<AppTabItem> tabs { get; set; }
+    @AuraEnabled public List<AppObjectItem> objects { get; set; }
+    @AuraEnabled public List<AppProfileAccessItem> profiles { get; set; }
+    @AuraEnabled public Integer totalTabs { get; set; }
+    @AuraEnabled public Integer totalObjects { get; set; }
+    @AuraEnabled public Integer totalProfilesWithAccess { get; set; }
   }
 
   public class SelectOption implements Comparable {
