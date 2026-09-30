@@ -156,6 +156,8 @@ public with sharing class AdminSecurityDataModel {
     public Integer assignedUserCount { get; set; }
     @AuraEnabled
     public List<String> includedPermSetNames { get; set; }
+    @AuraEnabled
+    public Boolean isCustom { get; set; }
 
     public Integer compareTo(Object compareTo) {
       PermissionSetGroupSummary other = (PermissionSetGroupSummary) compareTo;

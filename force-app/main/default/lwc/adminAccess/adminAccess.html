@@ -1516,6 +1516,15 @@
                   </div>
                   <div class="filter-combo-box">
                     <lightning-combobox
+                      label="Type Filter"
+                      variant="label-hidden"
+                      value={psgTypeFilter}
+                      options={psgTypeOptions}
+                      onchange={handlePsgTypeFilterChange}
+                    ></lightning-combobox>
+                  </div>
+                  <div class="filter-combo-box">
+                    <lightning-combobox
                       label="Status Filter"
                       variant="label-hidden"
                       value={psgStatusFilter}
@@ -1544,6 +1553,7 @@
                   <thead>
                     <tr>
                       <th>Permission Set Group</th>
+                      <th>Type</th>
                       <th>Status</th>
                       <th class="slds-text-align_center">Sets</th>
                       <th class="slds-text-align_center">Users</th>
@@ -1561,6 +1571,9 @@
                           >
                             {grp.masterLabel}
                           </button>
+                        </td>
+                        <td data-label="Type">
+                          <span class={grp.typeClass}>{grp.typeLabel}</span>
                         </td>
                         <td data-label="Status">
                           <span class="badge-active">{grp.status}</span>
@@ -1589,20 +1602,32 @@
               <div class="toolbar-filters">
                 <div class="filter-combo-box">
                   <lightning-combobox
-                    label="Target Type"
+                    label="View By"
                     variant="label-hidden"
                     value={objTargetType}
                     options={targetTypeOptions}
                     onchange={handleObjTargetTypeChange}
                   ></lightning-combobox>
                 </div>
+                <template lwc:if={isObjUserTarget}>
+                  <div class="filter-combo-box">
+                    <lightning-combobox
+                      label="Filter by Profile"
+                      variant="label-hidden"
+                      value={objProfileFilter}
+                      options={profileFilterOptions}
+                      placeholder="All Profiles"
+                      onchange={handleObjProfileFilterChange}
+                    ></lightning-combobox>
+                  </div>
+                </template>
                 <div class="search-input-box">
                   <lightning-combobox
                     label="Select Target"
                     variant="label-hidden"
                     value={objSelectedTargetId}
                     options={objTargetOptions}
-                    placeholder="Select Target..."
+                    placeholder={objTargetPlaceholder}
                     onchange={handleObjTargetChange}
                   ></lightning-combobox>
                 </div>
@@ -1619,35 +1644,6 @@
               </div>
             </div>
 
-            <template lwc:if={isObjTargetCustom}>
-              <div class="info-alert-banner">
-                <lightning-icon
-                  icon-name="utility:edit"
-                  size="x-small"
-                  class="alert-icon"
-                ></lightning-icon>
-                <div>
-                  <strong>Custom Permission Set Selected:</strong> You can
-                  directly update object-level CRUD and View All / Modify All
-                  permissions below. Changes are saved to Salesforce database.
-                </div>
-              </div>
-            </template>
-            <template lwc:else>
-              <div class="info-alert-banner warning">
-                <lightning-icon
-                  icon-name="utility:lock"
-                  size="x-small"
-                  class="alert-icon"
-                ></lightning-icon>
-                <div>
-                  <strong>Profile Selected (View Only):</strong> Object
-                  permissions on Profiles are managed in Salesforce Setup
-                  metadata and cannot be updated via standard Apex DML.
-                </div>
-              </div>
-            </template>
-
             <div class="styled-table-container">
               <table class="custom-data-table resp-list">
                 <thead>
@@ -1661,7 +1657,6 @@
                     <th class="slds-text-align_center">Delete</th>
                     <th class="slds-text-align_center">View All</th>
                     <th class="slds-text-align_center">Modify All</th>
-                    <th class="slds-text-align_right">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1731,27 +1726,13 @@
                             ><span class="perm-check-false">—</span></template
                           >
                         </td>
-                        <td data-label="Action" class="slds-text-align_right">
-                          <template lwc:if={op.isEditable}>
-                            <lightning-button
-                              label="Edit Permissions"
-                              icon-name="utility:edit"
-                              variant="brand-outline"
-                              data-type={op.sobjectType}
-                              onclick={handleOpenEditObject}
-                            ></lightning-button>
-                          </template>
-                          <template lwc:else>
-                            <span class="badge-metadata">Metadata Managed</span>
-                          </template>
-                        </td>
                       </tr>
                     </template>
                   </template>
                   <template lwc:else>
                     <tr>
                       <td
-                        colspan="10"
+                        colspan="9"
                         class="slds-text-align_center slds-p-around_large slds-text-color_weak"
                       >
                         No object permissions configured for this selection.
@@ -1826,19 +1807,32 @@
                 </div>
                 <div class="filter-combo-box">
                   <lightning-combobox
-                    label="Target Type"
+                    label="View By"
                     variant="label-hidden"
                     value={flsTargetType}
                     options={targetTypeOptions}
                     onchange={handleFlsTargetTypeChange}
                   ></lightning-combobox>
                 </div>
+                <template lwc:if={isFlsUserTarget}>
+                  <div class="filter-combo-box">
+                    <lightning-combobox
+                      label="Filter by Profile"
+                      variant="label-hidden"
+                      value={flsProfileFilter}
+                      options={profileFilterOptions}
+                      placeholder="All Profiles"
+                      onchange={handleFlsProfileFilterChange}
+                    ></lightning-combobox>
+                  </div>
+                </template>
                 <div class="search-input-box">
                   <lightning-combobox
                     label="Select Target"
                     variant="label-hidden"
                     value={flsSelectedTargetId}
                     options={flsTargetOptions}
+                    placeholder={flsTargetPlaceholder}
                     onchange={handleFlsTargetChange}
                   ></lightning-combobox>
                 </div>
@@ -1865,7 +1859,6 @@
                     <th>Field Type</th>
                     <th class="slds-text-align_center">Read Access</th>
                     <th class="slds-text-align_center">Edit Access</th>
-                    <th class="slds-text-align_right">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1906,27 +1899,13 @@
                             ><span class="perm-check-false">—</span></template
                           >
                         </td>
-                        <td data-label="Action" class="slds-text-align_right">
-                          <template lwc:if={fp.isEditable}>
-                            <lightning-button
-                              label="Edit FLS"
-                              icon-name="utility:edit"
-                              variant="brand-outline"
-                              data-field={fp.field}
-                              onclick={handleOpenEditField}
-                            ></lightning-button>
-                          </template>
-                          <template lwc:else>
-                            <span class="badge-metadata">Metadata Managed</span>
-                          </template>
-                        </td>
                       </tr>
                     </template>
                   </template>
                   <template lwc:else>
                     <tr>
                       <td
-                        colspan="7"
+                        colspan="6"
                         class="slds-text-align_center slds-p-around_large slds-text-color_weak"
                       >
                         No fields found for this object or search query.

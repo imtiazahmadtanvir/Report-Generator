@@ -16,6 +16,7 @@ import getObjectPermissionsForTarget from "@salesforce/apex/AdminAccessControlle
 import getFieldPermissionsForTarget from "@salesforce/apex/AdminAccessController.getFieldPermissionsForTarget";
 import getAppAccessList from "@salesforce/apex/AdminAccessController.getAppAccessList";
 import getAccessibleObjects from "@salesforce/apex/AdminAccessController.getAccessibleObjects";
+import getUserOptions from "@salesforce/apex/AdminAccessController.getUserOptions";
 
 // Mutation Endpoints
 import removePermissionSetFromUser from "@salesforce/apex/AdminAccessController.removePermissionSetFromUser";
@@ -79,8 +80,9 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
   ];
   @track objectOptions = [];
   @track targetTypeOptions = [
-    { label: "Permission Set", value: "PermissionSet" },
-    { label: "Profile", value: "Profile" }
+    { label: "Profile", value: "Profile" },
+    { label: "User", value: "User" },
+    { label: "Permission Set", value: "PermissionSet" }
   ];
 
   // SECTION 1: USERS STATE
@@ -92,7 +94,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
   // SECTION 2: PERMISSION SETS STATE
   @track psSearchTerm = "";
-  @track psTypeFilter = "All";
+  @track psTypeFilter = "Custom";
   @track permSetsList = [];
   @track selectedPermSet = null;
   @track selectedPermSetSubTab = "users";
@@ -100,6 +102,13 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
   // SECTION 3: PERMISSION SET GROUPS STATE
   @track psgSearchTerm = "";
   @track psgStatusFilter = "All";
+  @track psgTypeFilter = "Custom";
+  @track psgTypeOptions = [
+    { label: "All Groups", value: "All" },
+    { label: "Custom Groups", value: "Custom" },
+    { label: "Standard Groups", value: "Standard" }
+  ];
+  allGroupsList = [];
   @track groupsList = [];
   @track selectedGroup = null;
   @track selectedGroupSubTab = "permSets";
@@ -118,17 +127,20 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
   // SECTION 5: OBJECT ACCESS STATE
   @track objTargetType = "Profile";
   @track objSelectedTargetId = "";
+  @track objProfileFilter = "";
   @track objSearchTerm = "";
   @track objPermItems = [];
   @track objTargetOptions = [];
 
   // SECTION 6: FIELD-LEVEL SECURITY STATE
   @track flsSelectedObject = "Account";
-  @track flsTargetType = "PermissionSet";
+  @track flsTargetType = "Profile";
   @track flsSelectedTargetId = "";
+  @track flsProfileFilter = "";
   @track flsSearchTerm = "";
   @track flsFieldItems = [];
   @track flsTargetOptions = [];
+  allUserOptions = [];
 
   // SECTION 7: APPS STATE
   @track appSearchTerm = "";
@@ -197,7 +209,8 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
         this.loadPermSetOptions(),
         this.loadGroups(),
         this.loadProfiles(),
-        this.loadObjects()
+        this.loadObjects(),
+        this.loadUserOptions()
       ]);
     } catch (error) {
       this.showToast("Error", this.extractErrorMessage(error), "error");
@@ -303,7 +316,27 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
       searchTerm: this.psgSearchTerm,
       statusFilter: this.psgStatusFilter
     });
-    this.groupsList = groups || [];
+    this.allGroupsList = (groups || []).map((g) => ({
+      ...g,
+      typeLabel: g.isCustom ? "Custom" : "Standard",
+      typeClass: g.isCustom ? "badge-custom" : "badge-standard"
+    }));
+    this.applyGroupFilters();
+  }
+
+  applyGroupFilters() {
+    if (this.psgTypeFilter === "Custom") {
+      this.groupsList = this.allGroupsList.filter((g) => g.isCustom);
+    } else if (this.psgTypeFilter === "Standard") {
+      this.groupsList = this.allGroupsList.filter((g) => !g.isCustom);
+    } else {
+      this.groupsList = this.allGroupsList;
+    }
+  }
+
+  handlePsgTypeFilterChange(event) {
+    this.psgTypeFilter = event.detail.value;
+    this.applyGroupFilters();
   }
 
   async loadProfiles() {
@@ -349,19 +382,80 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     }));
   }
 
+  async loadUserOptions() {
+    try {
+      const res = await getUserOptions();
+      this.allUserOptions = res || [];
+      this.updateTargetDropdowns();
+    } catch (err) {
+      console.error("Error loading user options", err);
+    }
+  }
+
+  get isObjUserTarget() {
+    return this.objTargetType === "User";
+  }
+
+  get isFlsUserTarget() {
+    return this.flsTargetType === "User";
+  }
+
+  get profileFilterOptions() {
+    const opts = [{ label: "All Profiles", value: "" }];
+    for (const p of this.profilesList) {
+      opts.push({
+        label:
+          p.userLicenseName && p.userLicenseName !== "None"
+            ? `${p.name} (${p.userLicenseName})`
+            : p.name,
+        value: p.id
+      });
+    }
+    return opts;
+  }
+
+  get objTargetPlaceholder() {
+    if (this.objTargetType === "User") return "Select User...";
+    if (this.objTargetType === "Profile") return "Select Profile...";
+    return "Select Permission Set...";
+  }
+
+  get flsTargetPlaceholder() {
+    if (this.flsTargetType === "User") return "Select User...";
+    if (this.flsTargetType === "Profile") return "Select Profile...";
+    return "Select Permission Set...";
+  }
+
   updateTargetDropdowns() {
     if (this.objTargetType === "PermissionSet") {
       this.objTargetOptions = this.permSetOptionsAll.map((ps) => ({
         label: ps.label + (ps.isCustom ? " (Custom)" : " (Standard)"),
         value: ps.id
       }));
+    } else if (this.objTargetType === "User") {
+      let filteredUsers = this.allUserOptions;
+      if (this.objProfileFilter) {
+        filteredUsers = filteredUsers.filter(
+          (u) => u.profileId === this.objProfileFilter
+        );
+      }
+      this.objTargetOptions = filteredUsers.map((u) => ({
+        label: `${u.name} (${u.licenseName})`,
+        value: u.id
+      }));
     } else {
       this.objTargetOptions = this.profilesList.map((p) => ({
-        label: p.name,
+        label:
+          p.userLicenseName && p.userLicenseName !== "None"
+            ? `${p.name} (${p.userLicenseName})`
+            : p.name,
         value: p.id
       }));
     }
-    if (this.objTargetOptions.length > 0 && !this.objSelectedTargetId) {
+    if (
+      this.objTargetOptions.length > 0 &&
+      !this.objTargetOptions.some((o) => o.value === this.objSelectedTargetId)
+    ) {
       this.objSelectedTargetId = this.objTargetOptions[0].value;
     }
 
@@ -370,13 +464,30 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
         label: ps.label + (ps.isCustom ? " (Custom)" : " (Standard)"),
         value: ps.id
       }));
+    } else if (this.flsTargetType === "User") {
+      let filteredUsers = this.allUserOptions;
+      if (this.flsProfileFilter) {
+        filteredUsers = filteredUsers.filter(
+          (u) => u.profileId === this.flsProfileFilter
+        );
+      }
+      this.flsTargetOptions = filteredUsers.map((u) => ({
+        label: `${u.name} (${u.licenseName})`,
+        value: u.id
+      }));
     } else {
       this.flsTargetOptions = this.profilesList.map((p) => ({
-        label: p.name,
+        label:
+          p.userLicenseName && p.userLicenseName !== "None"
+            ? `${p.name} (${p.userLicenseName})`
+            : p.name,
         value: p.id
       }));
     }
-    if (this.flsTargetOptions.length > 0 && !this.flsSelectedTargetId) {
+    if (
+      this.flsTargetOptions.length > 0 &&
+      !this.flsTargetOptions.some((o) => o.value === this.flsSelectedTargetId)
+    ) {
       this.flsSelectedTargetId = this.flsTargetOptions[0].value;
     }
   }
@@ -429,7 +540,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
         this.selectedPermSetSubTab = "users";
         this.editingPermSetId = null;
         this.psSearchTerm = "";
-        this.psTypeFilter = "All";
+        this.psTypeFilter = "Custom";
         this.pages = { ...this.pages, permSets: 1 };
         this.isLoading = true;
         try {
@@ -446,6 +557,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
         this.selectedGroupSubTab = "permSets";
         this.psgSearchTerm = "";
         this.psgStatusFilter = "All";
+        this.psgTypeFilter = "Custom";
         this.isLoading = true;
         try {
           await this.loadGroups();
@@ -1020,6 +1132,13 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     this.fetchObjectPermissions();
   }
 
+  handleObjProfileFilterChange(event) {
+    this.objProfileFilter = event.detail.value;
+    this.objSelectedTargetId = "";
+    this.updateTargetDropdowns();
+    this.fetchObjectPermissions();
+  }
+
   handleObjTargetChange(event) {
     this.objSelectedTargetId = event.detail.value;
     this.fetchObjectPermissions();
@@ -1134,6 +1253,13 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
   handleFlsTargetTypeChange(event) {
     this.flsTargetType = event.detail.value;
+    this.flsSelectedTargetId = "";
+    this.updateTargetDropdowns();
+    this.fetchFieldPermissions();
+  }
+
+  handleFlsProfileFilterChange(event) {
+    this.flsProfileFilter = event.detail.value;
     this.flsSelectedTargetId = "";
     this.updateTargetDropdowns();
     this.fetchFieldPermissions();

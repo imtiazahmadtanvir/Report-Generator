@@ -211,6 +211,32 @@ public with sharing class AdminSecurityService {
     return page;
   }
 
+  public static List<Map<String, String>> getUserOptions() {
+    verifyAdminAccess();
+    List<Map<String, String>> options = new List<Map<String, String>>();
+    for (User u : [
+      SELECT Id, Name, ProfileId, Profile.Name, Profile.UserLicense.Name
+      FROM User
+      WHERE IsActive = TRUE
+      ORDER BY Name ASC
+      LIMIT 500
+    ]) {
+      Map<String, String> item = new Map<String, String>();
+      item.put('id', u.Id);
+      item.put('name', u.Name);
+      item.put('profileId', u.ProfileId != null ? String.valueOf(u.ProfileId) : '');
+      item.put('profileName', u.Profile != null ? u.Profile.Name : '');
+      item.put(
+        'licenseName',
+        u.Profile != null && u.Profile.UserLicense != null
+          ? u.Profile.UserLicense.Name
+          : (u.Profile != null ? u.Profile.Name : 'Standard')
+      );
+      options.add(item);
+    }
+    return options;
+  }
+
   /**
    * @description Fetch detailed user security profile: direct perm sets, groups, and effective object access
    */
@@ -274,7 +300,8 @@ public with sharing class AdminSecurityService {
         PermissionSetGroup.DeveloperName,
         PermissionSetGroup.MasterLabel,
         PermissionSetGroup.Description,
-        PermissionSetGroup.Status
+        PermissionSetGroup.Status,
+        PermissionSetGroup.NamespacePrefix
       FROM PermissionSetAssignment
       WHERE AssigneeId = :userId
     ];
@@ -293,6 +320,7 @@ public with sharing class AdminSecurityService {
         grp.masterLabel = psa.PermissionSetGroup.MasterLabel;
         grp.description = psa.PermissionSetGroup.Description;
         grp.status = psa.PermissionSetGroup.Status;
+        grp.isCustom = (psa.PermissionSetGroup.NamespacePrefix == null);
         assignedGroups.add(grp);
       } else if (
         psa.PermissionSetId != null && !psa.PermissionSet.IsOwnedByProfile
@@ -336,7 +364,7 @@ public with sharing class AdminSecurityService {
 
     // 3. Available Permission Set Groups
     List<PermissionSetGroup> availGrpList = [
-      SELECT Id, DeveloperName, MasterLabel, Description, Status
+      SELECT Id, DeveloperName, MasterLabel, Description, Status, NamespacePrefix
       FROM PermissionSetGroup
       WHERE Id NOT IN :assignedGroupIds
       ORDER BY MasterLabel ASC
@@ -351,6 +379,7 @@ public with sharing class AdminSecurityService {
       grpDto.masterLabel = grp.MasterLabel;
       grpDto.description = grp.Description;
       grpDto.status = grp.Status;
+      grpDto.isCustom = (grp.NamespacePrefix == null);
       availableGroups.add(grpDto);
     }
 
@@ -749,7 +778,7 @@ public with sharing class AdminSecurityService {
   ) {
     verifyAdminAccess();
 
-    String query = 'SELECT Id, DeveloperName, MasterLabel, Description, Status FROM PermissionSetGroup';
+    String query = 'SELECT Id, DeveloperName, MasterLabel, Description, Status, NamespacePrefix FROM PermissionSetGroup';
     List<String> conditions = new List<String>();
 
     if (String.isNotBlank(statusFilter) && statusFilter != 'All') {
@@ -823,6 +852,7 @@ public with sharing class AdminSecurityService {
       dto.masterLabel = grp.MasterLabel;
       dto.description = grp.Description;
       dto.status = grp.Status;
+      dto.isCustom = (grp.NamespacePrefix == null);
       dto.componentCount = compCountMap.containsKey(grp.Id)
         ? compCountMap.get(grp.Id)
         : 0;
@@ -1446,9 +1476,9 @@ public with sharing class AdminSecurityService {
       throw new AuraHandledException('Target ID cannot be blank.');
     }
 
-    Id targetPermSetId = parentId;
     String parentName = '';
     Boolean isEditable = false;
+    Set<Id> permSetIds = new Set<Id>();
 
     if (targetType == 'Profile') {
       List<PermissionSet> pList = [
@@ -1462,9 +1492,42 @@ public with sharing class AdminSecurityService {
           'No underlying Permission Set found for profile.'
         );
       }
-      targetPermSetId = pList[0].Id;
+      permSetIds.add(pList[0].Id);
       parentName = pList[0].Profile.Name;
       isEditable = false;
+    } else if (targetType == 'User') {
+      List<User> uList = [
+        SELECT Id, Name, ProfileId, Profile.Name, Profile.UserLicense.Name
+        FROM User
+        WHERE Id = :parentId
+        LIMIT 1
+      ];
+      if (uList.isEmpty()) {
+        throw new AuraHandledException('User not found.');
+      }
+      User u = uList[0];
+      String licName = u.Profile != null && u.Profile.UserLicense != null
+        ? u.Profile.UserLicense.Name
+        : (u.Profile != null ? u.Profile.Name : 'Standard');
+      parentName = u.Name + ' (' + licName + ')';
+      isEditable = false;
+
+      if (u.ProfileId != null) {
+        for (PermissionSet pps : [
+          SELECT Id FROM PermissionSet WHERE ProfileId = :u.ProfileId LIMIT 1
+        ]) {
+          permSetIds.add(pps.Id);
+        }
+      }
+      for (PermissionSetAssignment psa : [
+        SELECT PermissionSetId
+        FROM PermissionSetAssignment
+        WHERE AssigneeId = :u.Id
+      ]) {
+        if (psa.PermissionSetId != null) {
+          permSetIds.add(psa.PermissionSetId);
+        }
+      }
     } else {
       PermissionSet ps = [
         SELECT Id, Label, IsCustom, IsOwnedByProfile
@@ -1472,60 +1535,76 @@ public with sharing class AdminSecurityService {
         WHERE Id = :parentId
         LIMIT 1
       ];
-      targetPermSetId = ps.Id;
+      permSetIds.add(ps.Id);
       parentName = ps.Label;
       isEditable = (ps.IsCustom && !ps.IsOwnedByProfile);
     }
 
-    String filters = ' WHERE ParentId = :targetPermSetId';
+    String filters = ' WHERE ParentId IN :permSetIds';
     String term = '';
     if (String.isNotBlank(searchTerm)) {
       term = '%' + String.escapeSingleQuotes(searchTerm.trim()) + '%';
       filters += ' AND SobjectType LIKE :term';
     }
 
-    Integer safeSize = (pageSize == null || pageSize <= 0) ? 15 : pageSize;
-    Integer safePage = (pageNumber == null || pageNumber < 1) ? 1 : pageNumber;
-    Integer offset = (safePage - 1) * safeSize;
-    Integer totalCount = Database.countQuery(
-      'SELECT count() FROM ObjectPermissions' + filters
-    );
-
     String query =
       'SELECT Id, ParentId, SobjectType, PermissionsRead, PermissionsCreate, PermissionsEdit, PermissionsDelete, PermissionsViewAllRecords, PermissionsModifyAllRecords FROM ObjectPermissions' +
       filters +
-      ' ORDER BY SobjectType ASC LIMIT :safeSize OFFSET :offset';
+      ' ORDER BY SobjectType ASC LIMIT 1000';
 
     List<ObjectPermissions> opList = Database.query(query);
     Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
 
-    List<AdminSecurityDataModel.ObjectPermItem> results = new List<AdminSecurityDataModel.ObjectPermItem>();
+    Map<String, AdminSecurityDataModel.ObjectPermItem> mergedMap = new Map<String, AdminSecurityDataModel.ObjectPermItem>();
     for (ObjectPermissions op : opList) {
-      AdminSecurityDataModel.ObjectPermItem item = new AdminSecurityDataModel.ObjectPermItem();
-      item.id = op.Id;
-      item.parentId = op.ParentId;
-      item.parentName = parentName;
-      item.parentType = targetType;
-      item.sobjectType = op.SobjectType;
-      item.isCustomObject = op.SobjectType.endsWith('__c');
-      if (gd.containsKey(op.SobjectType.toLowerCase())) {
-        item.sobjectLabel = gd.get(op.SobjectType.toLowerCase())
-          .getDescribe()
-          .getLabel();
+      if (!mergedMap.containsKey(op.SobjectType)) {
+        AdminSecurityDataModel.ObjectPermItem item = new AdminSecurityDataModel.ObjectPermItem();
+        item.id = op.Id;
+        item.parentId = parentId;
+        item.parentName = parentName;
+        item.parentType = targetType;
+        item.sobjectType = op.SobjectType;
+        item.isCustomObject = op.SobjectType.endsWith('__c');
+        if (gd.containsKey(op.SobjectType.toLowerCase())) {
+          item.sobjectLabel = gd.get(op.SobjectType.toLowerCase())
+            .getDescribe()
+            .getLabel();
+        } else {
+          item.sobjectLabel = op.SobjectType;
+        }
+        item.permissionsRead = op.PermissionsRead;
+        item.permissionsCreate = op.PermissionsCreate;
+        item.permissionsEdit = op.PermissionsEdit;
+        item.permissionsDelete = op.PermissionsDelete;
+        item.permissionsViewAllRecords = op.PermissionsViewAllRecords;
+        item.permissionsModifyAllRecords = op.PermissionsModifyAllRecords;
+        item.isEditable = isEditable;
+        mergedMap.put(op.SobjectType, item);
       } else {
-        item.sobjectLabel = op.SobjectType;
+        AdminSecurityDataModel.ObjectPermItem item = mergedMap.get(op.SobjectType);
+        item.permissionsRead = item.permissionsRead || op.PermissionsRead;
+        item.permissionsCreate = item.permissionsCreate || op.PermissionsCreate;
+        item.permissionsEdit = item.permissionsEdit || op.PermissionsEdit;
+        item.permissionsDelete = item.permissionsDelete || op.PermissionsDelete;
+        item.permissionsViewAllRecords = item.permissionsViewAllRecords || op.PermissionsViewAllRecords;
+        item.permissionsModifyAllRecords = item.permissionsModifyAllRecords || op.PermissionsModifyAllRecords;
       }
-      item.permissionsRead = op.PermissionsRead;
-      item.permissionsCreate = op.PermissionsCreate;
-      item.permissionsEdit = op.PermissionsEdit;
-      item.permissionsDelete = op.PermissionsDelete;
-      item.permissionsViewAllRecords = op.PermissionsViewAllRecords;
-      item.permissionsModifyAllRecords = op.PermissionsModifyAllRecords;
-      item.isEditable = isEditable;
-      results.add(item);
     }
 
-    results.sort();
+    List<AdminSecurityDataModel.ObjectPermItem> allSorted = mergedMap.values();
+    allSorted.sort();
+
+    Integer safeSize = (pageSize == null || pageSize <= 0) ? 15 : pageSize;
+    Integer safePage = (pageNumber == null || pageNumber < 1) ? 1 : pageNumber;
+    Integer offset = (safePage - 1) * safeSize;
+    Integer totalCount = allSorted.size();
+
+    List<AdminSecurityDataModel.ObjectPermItem> results = new List<AdminSecurityDataModel.ObjectPermItem>();
+    Integer startIdx = offset;
+    Integer endIdx = Math.min(startIdx + safeSize, totalCount);
+    for (Integer i = startIdx; i < endIdx; i++) {
+      results.add(allSorted[i]);
+    }
 
     AdminSecurityDataModel.ObjectPermPage page = new AdminSecurityDataModel.ObjectPermPage();
     page.records = results;
@@ -1552,9 +1631,9 @@ public with sharing class AdminSecurityService {
       );
     }
 
-    Id targetPermSetId = parentId;
     String parentName = '';
     Boolean isEditable = false;
+    Set<Id> permSetIds = new Set<Id>();
 
     if (targetType == 'Profile') {
       List<PermissionSet> pList = [
@@ -1568,9 +1647,42 @@ public with sharing class AdminSecurityService {
           'No underlying Permission Set found for profile.'
         );
       }
-      targetPermSetId = pList[0].Id;
+      permSetIds.add(pList[0].Id);
       parentName = pList[0].Profile.Name;
       isEditable = false;
+    } else if (targetType == 'User') {
+      List<User> uList = [
+        SELECT Id, Name, ProfileId, Profile.Name, Profile.UserLicense.Name
+        FROM User
+        WHERE Id = :parentId
+        LIMIT 1
+      ];
+      if (uList.isEmpty()) {
+        throw new AuraHandledException('User not found.');
+      }
+      User u = uList[0];
+      String licName = u.Profile != null && u.Profile.UserLicense != null
+        ? u.Profile.UserLicense.Name
+        : (u.Profile != null ? u.Profile.Name : 'Standard');
+      parentName = u.Name + ' (' + licName + ')';
+      isEditable = false;
+
+      if (u.ProfileId != null) {
+        for (PermissionSet pps : [
+          SELECT Id FROM PermissionSet WHERE ProfileId = :u.ProfileId LIMIT 1
+        ]) {
+          permSetIds.add(pps.Id);
+        }
+      }
+      for (PermissionSetAssignment psa : [
+        SELECT PermissionSetId
+        FROM PermissionSetAssignment
+        WHERE AssigneeId = :u.Id
+      ]) {
+        if (psa.PermissionSetId != null) {
+          permSetIds.add(psa.PermissionSetId);
+        }
+      }
     } else {
       PermissionSet ps = [
         SELECT Id, Label, IsCustom, IsOwnedByProfile
@@ -1578,7 +1690,7 @@ public with sharing class AdminSecurityService {
         WHERE Id = :parentId
         LIMIT 1
       ];
-      targetPermSetId = ps.Id;
+      permSetIds.add(ps.Id);
       parentName = ps.Label;
       isEditable = (ps.IsCustom && !ps.IsOwnedByProfile);
     }
@@ -1599,13 +1711,18 @@ public with sharing class AdminSecurityService {
     List<FieldPermissions> existingFpList = [
       SELECT Id, ParentId, SobjectType, Field, PermissionsRead, PermissionsEdit
       FROM FieldPermissions
-      WHERE ParentId = :targetPermSetId AND SobjectType = :sobjectType
-      LIMIT 500
+      WHERE ParentId IN :permSetIds AND SobjectType = :sobjectType
+      LIMIT 1000
     ];
 
-    Map<String, FieldPermissions> fpMap = new Map<String, FieldPermissions>();
+    Map<String, Boolean> fpReadMap = new Map<String, Boolean>();
+    Map<String, Boolean> fpEditMap = new Map<String, Boolean>();
     for (FieldPermissions fp : existingFpList) {
-      fpMap.put(fp.Field.toLowerCase(), fp);
+      String fKey = fp.Field.toLowerCase();
+      Boolean curR = fpReadMap.containsKey(fKey) ? fpReadMap.get(fKey) : false;
+      Boolean curE = fpEditMap.containsKey(fKey) ? fpEditMap.get(fKey) : false;
+      fpReadMap.put(fKey, curR || fp.PermissionsRead);
+      fpEditMap.put(fKey, curE || fp.PermissionsEdit);
     }
 
     List<AdminSecurityDataModel.FieldPermItem> results = new List<AdminSecurityDataModel.FieldPermItem>();
@@ -1627,7 +1744,7 @@ public with sharing class AdminSecurityService {
         }
 
         AdminSecurityDataModel.FieldPermItem item = new AdminSecurityDataModel.FieldPermItem();
-        item.parentId = targetPermSetId;
+        item.parentId = parentId;
         item.parentName = parentName;
         item.sobjectType = sobjectType;
         item.field = fullFieldName;
@@ -1636,16 +1753,10 @@ public with sharing class AdminSecurityService {
         item.isCustom = fd.isCustom();
         item.isEditable = isEditable;
 
-        FieldPermissions existingFp = fpMap.get(fullFieldName.toLowerCase());
-        if (existingFp != null) {
-          item.id = existingFp.Id;
-          item.permissionsRead = existingFp.PermissionsRead;
-          item.permissionsEdit = existingFp.PermissionsEdit;
-        } else {
-          item.id = null;
-          item.permissionsRead = false;
-          item.permissionsEdit = false;
-        }
+        String fKey = fullFieldName.toLowerCase();
+        item.permissionsRead = fpReadMap.containsKey(fKey) ? fpReadMap.get(fKey) : false;
+        item.permissionsEdit = fpEditMap.containsKey(fKey) ? fpEditMap.get(fKey) : false;
+        item.id = null;
         results.add(item);
       }
     }

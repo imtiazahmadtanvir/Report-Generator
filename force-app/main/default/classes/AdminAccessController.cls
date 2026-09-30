@@ -85,6 +85,15 @@ public with sharing class AdminAccessController {
         }
     }
 
+    @AuraEnabled(cacheable=true)
+    public static List<Map<String, String>> getUserOptions() {
+        try {
+            return AdminSecurityService.getUserOptions();
+        } catch (Exception ex) {
+            throw new AuraHandledException(ex.getMessage());
+        }
+    }
+
     @AuraEnabled(cacheable=false)
     public static AdminSecurityDataModel.ObjectPermPage getObjectPermissionsForTarget(Id parentId, String targetType, String searchTerm, Integer pageNumber, Integer pageSize) {
         try {

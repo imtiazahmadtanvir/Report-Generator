@@ -151,10 +151,14 @@ private class AdminAccessControllerTest {
     @isTest
     static void testGetObjectAndFieldPermissionsForTarget() {
         PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'Test_Admin_Custom_PS' LIMIT 1];
+        User testUser = [SELECT Id, ProfileId FROM User WHERE Id = :UserInfo.getUserId()];
 
         Test.startTest();
         AdminSecurityDataModel.ObjectPermPage objPerms = AdminAccessController.getObjectPermissionsForTarget(ps.Id, 'PermissionSet', '', 1, 15);
         AdminSecurityDataModel.FieldPermPage fieldPerms = AdminAccessController.getFieldPermissionsForTarget(ps.Id, 'PermissionSet', 'Account', '', 1, 15);
+        List<Map<String, String>> userOpts = AdminAccessController.getUserOptions();
+        AdminSecurityDataModel.ObjectPermPage userObjPerms = AdminAccessController.getObjectPermissionsForTarget(testUser.Id, 'User', '', 1, 15);
+        AdminSecurityDataModel.FieldPermPage userFieldPerms = AdminAccessController.getFieldPermissionsForTarget(testUser.Id, 'User', 'Account', '', 1, 15);
         Test.stopTest();
 
         Assert.isNotNull(objPerms, 'Object permissions should not be null');
@@ -163,6 +167,9 @@ private class AdminAccessControllerTest {
         Assert.isNotNull(fieldPerms, 'Field permissions should not be null');
         Assert.isTrue(fieldPerms.totalCount > 0, 'Account fields should be counted');
         Assert.isTrue(fieldPerms.records.size() <= 15, 'Field page should not exceed the page size');
+        Assert.isNotNull(userOpts, 'User options should not be null');
+        Assert.isNotNull(userObjPerms, 'User object permissions should not be null');
+        Assert.isNotNull(userFieldPerms, 'User field permissions should not be null');
     }
 
     @isTest
