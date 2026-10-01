@@ -538,12 +538,21 @@
                         onchange={handleUserStatusFilterChange}
                       ></lightning-combobox>
                     </div>
+                    <div class="filter-combo-box filter-combo-box_sm">
+                      <lightning-combobox
+                        label="Page Size"
+                        variant="label-hidden"
+                        value={userPageSize}
+                        options={userPageSizeOptions}
+                        onchange={handleUserPageSizeChange}
+                      ></lightning-combobox>
+                    </div>
                   </div>
                   <div class="toolbar-actions">
                     <span
                       class="slds-text-body_small slds-text-color_weak slds-m-right_small"
                     >
-                      Showing {usersList.length} User(s)
+                      Showing {usersView.showing} of {usersView.total} User(s)
                     </span>
                     <lightning-button
                       label="New User"
@@ -623,7 +632,7 @@
                   </table>
                 </div>
 
-                <template lwc:if={usersView.multiPage}>
+                <template lwc:if={usersView.showPagination}>
                   <div class="pagination-bar">
                     <span class="pagination-info"
                       >Showing {usersView.showing} of {usersView.total}</span

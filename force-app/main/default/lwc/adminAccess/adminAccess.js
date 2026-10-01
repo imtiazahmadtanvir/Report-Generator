@@ -93,6 +93,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
   @track userSearchTerm = "";
   @track userProfileFilter = "";
   @track userStatusFilter = "All";
+  @track userPageSize = "10";
   @track usersList = [];
   @track selectedUser = null;
 
@@ -298,7 +299,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
       profileId: this.userProfileFilter,
       statusFilter: this.userStatusFilter,
       pageNumber: this.pages.users,
-      pageSize: PAGE_SIZE
+      pageSize: this.userPageSizeNum
     });
     this.usersList = ((res && res.records) || []).map((u) => ({
       ...u,
@@ -1223,6 +1224,25 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
   handleUserStatusFilterChange(event) {
     this.userStatusFilter = event.detail.value;
     this.loadUsers();
+  }
+
+  get userPageSizeNum() {
+    return parseInt(this.userPageSize, 10) || 10;
+  }
+
+  get userPageSizeOptions() {
+    return [
+      { label: "5 / page", value: "5" },
+      { label: "10 / page", value: "10" },
+      { label: "15 / page", value: "15" },
+      { label: "25 / page", value: "25" },
+      { label: "50 / page", value: "50" }
+    ];
+  }
+
+  async handleUserPageSizeChange(event) {
+    this.userPageSize = event.detail.value;
+    await this.loadUsers(true);
   }
 
   async handleViewUserDetail(event) {
@@ -2311,9 +2331,10 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
   // =========================================================================
   buildPageView(rows, listKey) {
     const total = this.totals[listKey] || 0;
-    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    const pageSize = listKey === "users" ? this.userPageSizeNum : PAGE_SIZE;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const current = Math.min(Math.max(this.pages[listKey] || 1, 1), totalPages);
-    const startIdx = total === 0 ? 0 : (current - 1) * PAGE_SIZE;
+    const startIdx = total === 0 ? 0 : (current - 1) * pageSize;
     const count = rows ? rows.length : 0;
     return {
       rows: rows || [],
@@ -2324,6 +2345,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
       prevDisabled: current <= 1,
       nextDisabled: current >= totalPages,
       multiPage: totalPages > 1,
+      showPagination: total > 0,
       items: this.buildPageItems(current, totalPages, listKey)
     };
   }

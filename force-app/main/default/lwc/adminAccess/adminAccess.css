@@ -424,6 +424,11 @@
   min-width: 170px;
 }
 
+.filter-combo-box_sm {
+  min-width: 110px;
+  max-width: 130px;
+}
+
 .toolbar-actions {
   display: flex;
   align-items: center;
