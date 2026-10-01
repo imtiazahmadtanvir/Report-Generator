@@ -1,6 +1,6 @@
-import { LightningElement, track } from "lwc";
+import { LightningElement, track, wire } from "lwc";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
-import { NavigationMixin } from "lightning/navigation";
+import { NavigationMixin, CurrentPageReference } from "lightning/navigation";
 
 // Apex Controller Endpoints
 import getAdminOverview from "@salesforce/apex/AdminAccessController.getAdminOverview";
@@ -39,6 +39,16 @@ import addPermissionSetsToGroup from "@salesforce/apex/AdminAccessController.add
 import removePermissionSetFromGroup from "@salesforce/apex/AdminAccessController.removePermissionSetFromGroup";
 
 const PAGE_SIZE = 15;
+const VALID_TABS = new Set([
+  "userAndProfile",
+  "profiles",
+  "users",
+  "permSets",
+  "groups",
+  "apps",
+  "objects",
+  "fields"
+]);
 
 export default class AdminAccess extends NavigationMixin(LightningElement) {
   @track isLoading = false;
@@ -221,8 +231,105 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     profileId: ""
   };
 
+  _pageRef = null;
+  _connected = false;
+
+  @wire(CurrentPageReference)
+  handlePageReference(pageRef) {
+    this._pageRef = pageRef;
+    if (pageRef && pageRef.state && this._connected) {
+      const state = pageRef.state;
+      const tab = state.c__tab || state.tab;
+      const subTab = state.c__subtab || state.subtab;
+      if (tab && VALID_TABS.has(tab)) {
+        const targetTab =
+          tab === "profiles" || tab === "users" ? "userAndProfile" : tab;
+        const targetSubTab =
+          tab === "profiles" ? "profile" : tab === "users" ? "user" : subTab;
+        if (
+          targetTab !== this.activeTab ||
+          (targetSubTab && targetSubTab !== this.userProfileSubTab)
+        ) {
+          this.resetAndLoadTab(targetTab, targetSubTab);
+        }
+      }
+    }
+  }
+
   connectedCallback() {
+    this._connected = true;
+    const { tab, subTab } = this.getUrlParams();
+    if (tab && VALID_TABS.has(tab)) {
+      if (tab === "profiles") {
+        this.activeTab = "userAndProfile";
+        this.userProfileSubTab = "profile";
+      } else if (tab === "users") {
+        this.activeTab = "userAndProfile";
+        this.userProfileSubTab = "user";
+      } else {
+        this.activeTab = tab;
+        if (subTab === "user" || subTab === "profile") {
+          this.userProfileSubTab = subTab;
+        }
+      }
+      this.updateUrlParams(
+        this.activeTab,
+        this.activeTab === "userAndProfile" ? this.userProfileSubTab : null
+      );
+    }
     this.loadInitialData();
+  }
+
+  getUrlParams() {
+    let tab = "";
+    let subTab = "";
+    try {
+      if (typeof window !== "undefined" && window.location) {
+        const searchParams = new URLSearchParams(window.location.search);
+        tab = searchParams.get("c__tab") || searchParams.get("tab") || "";
+        subTab =
+          searchParams.get("c__subtab") || searchParams.get("subtab") || "";
+
+        if (!tab && window.location.hash) {
+          const hashIdx = window.location.hash.indexOf("?");
+          if (hashIdx !== -1) {
+            const hashParams = new URLSearchParams(
+              window.location.hash.substring(hashIdx)
+            );
+            tab = hashParams.get("c__tab") || hashParams.get("tab") || "";
+            subTab =
+              hashParams.get("c__subtab") || hashParams.get("subtab") || "";
+          }
+        }
+      }
+    } catch (e) {}
+
+    if (this._pageRef && this._pageRef.state) {
+      const state = this._pageRef.state;
+      tab = tab || state.c__tab || state.tab || "";
+      subTab = subTab || state.c__subtab || state.subtab || "";
+    }
+
+    return { tab, subTab };
+  }
+
+  updateUrlParams(tab, subTab) {
+    try {
+      if (typeof window !== "undefined" && window.history && window.location) {
+        const url = new URL(window.location.href);
+        if (tab) {
+          url.searchParams.set("c__tab", tab);
+        } else {
+          url.searchParams.delete("c__tab");
+        }
+        if (subTab) {
+          url.searchParams.set("c__subtab", subTab);
+        } else {
+          url.searchParams.delete("c__subtab");
+        }
+        window.history.replaceState(window.history.state, "", url.toString());
+      }
+    } catch (e) {}
   }
 
   async loadInitialData() {
@@ -604,6 +711,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     this.appProfileSearchTerm = "";
     this.activeObjectFields = null;
     this.showObjectFieldsModal = false;
+    this.updateUrlParams("apps");
   }
 
   handleAppDetailSubTab(event) {
@@ -1089,14 +1197,24 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     this.showCreatePsgModal = false;
     this.showCreateUserModal = false;
 
+    // Always clear past selection/detail state
+    this.selectedUser = null;
+    this.selectedProfile = null;
+    this.selectedPermSet = null;
+    this.editingPermSetId = null;
+    this.editingPermSetLabel = "";
+    this.selectedGroup = null;
+    this.selectedApp = null;
+    this.selectedAppDetail = null;
+
     switch (tabName) {
       case "userAndProfile":
       case "profiles":
       case "users":
         this.activeTab = "userAndProfile";
-        this.userProfileSubTab = subTab || "profile";
-        this.selectedUser = null;
-        this.selectedProfile = null;
+        this.userProfileSubTab =
+          subTab || (tabName === "users" ? "user" : "profile");
+        this.updateUrlParams("userAndProfile", this.userProfileSubTab);
         this.userSearchTerm = "";
         this.userProfileFilter = "";
         this.userStatusFilter = "All";
@@ -1106,7 +1224,11 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
         this.pages = { ...this.pages, users: 1 };
         this.isLoading = true;
         try {
-          await Promise.all([this.loadProfiles(), this.loadUsers(true)]);
+          await Promise.all([
+            this.loadProfiles(),
+            this.loadUsers(true),
+            this.loadOverview()
+          ]);
         } catch (error) {
           this.showToast("Error", this.extractErrorMessage(error), "error");
         } finally {
@@ -1115,15 +1237,17 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
         break;
 
       case "permSets":
-        this.selectedPermSet = null;
+        this.updateUrlParams("permSets");
         this.selectedPermSetSubTab = "users";
-        this.editingPermSetId = null;
         this.psSearchTerm = "";
         this.psTypeFilter = "Custom";
         this.pages = { ...this.pages, permSets: 1 };
         this.isLoading = true;
         try {
-          await this.loadPermissionSets(true);
+          await Promise.all([
+            this.loadPermissionSets(true),
+            this.loadOverview()
+          ]);
         } catch (error) {
           this.showToast("Error", this.extractErrorMessage(error), "error");
         } finally {
@@ -1132,14 +1256,14 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
         break;
 
       case "groups":
-        this.selectedGroup = null;
+        this.updateUrlParams("groups");
         this.selectedGroupSubTab = "permSets";
         this.psgSearchTerm = "";
         this.psgStatusFilter = "All";
         this.psgTypeFilter = "Custom";
         this.isLoading = true;
         try {
-          await this.loadGroups();
+          await Promise.all([this.loadGroups(), this.loadOverview()]);
         } catch (error) {
           this.showToast("Error", this.extractErrorMessage(error), "error");
         } finally {
@@ -1148,28 +1272,45 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
         break;
 
       case "objects":
+        this.updateUrlParams("objects");
         this.objSearchTerm = "";
         this.pages = { ...this.pages, objects: 1 };
         this.updateTargetDropdowns();
-        if (this.objSelectedTargetId) {
-          await this.fetchObjectPermissions(true);
+        this.isLoading = true;
+        try {
+          if (this.objSelectedTargetId) {
+            await this.fetchObjectPermissions(true);
+          }
+          await this.loadOverview();
+        } finally {
+          this.isLoading = false;
         }
         break;
 
       case "fields":
+        this.updateUrlParams("fields");
         this.flsSearchTerm = "";
         this.pages = { ...this.pages, fls: 1 };
         this.updateTargetDropdowns();
-        if (this.flsSelectedTargetId) {
-          await this.fetchFieldPermissions(true);
+        this.isLoading = true;
+        try {
+          if (this.flsSelectedTargetId) {
+            await this.fetchFieldPermissions(true);
+          }
+          await this.loadOverview();
+        } finally {
+          this.isLoading = false;
         }
         break;
 
       case "apps":
+        this.updateUrlParams("apps");
         this.appSearchTerm = "";
+        this.appTypeFilter = "Custom";
+        this.appNavFilter = "All";
         this.isLoading = true;
         try {
-          await this.loadApps();
+          await Promise.all([this.loadApps(), this.loadOverview()]);
         } catch (error) {
           this.showToast("Error", this.extractErrorMessage(error), "error");
         } finally {
@@ -1188,6 +1329,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
       this.userProfileSubTab = subtab;
       this.selectedProfile = null;
       this.selectedUser = null;
+      this.updateUrlParams("userAndProfile", subtab);
       if (subtab === "profile") {
         this.profileSearchTerm = "";
         this.isLoading = true;
@@ -1272,6 +1414,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
   handleBackToUsers() {
     this.selectedUser = null;
+    this.updateUrlParams("userAndProfile", "user");
     this.loadUsers();
   }
 
@@ -1393,6 +1536,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
   handleBackToPermSets() {
     this.selectedPermSet = null;
+    this.updateUrlParams("permSets");
     this.loadPermissionSets();
   }
 
@@ -1467,6 +1611,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     this.editingPermSetId = id;
     this.editingPermSetLabel = label;
     this.editingPermSetInitialTab = initialTab || "objects";
+    this.updateUrlParams("permSets");
   }
 
   handleOpenPermSetEditor(event) {
@@ -1480,6 +1625,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
   handleClosePermSetEditor() {
     this.editingPermSetId = null;
     this.editingPermSetLabel = "";
+    this.updateUrlParams("permSets");
     this.loadPermissionSets();
   }
 
@@ -1561,6 +1707,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
   handleBackToGroups() {
     this.selectedGroup = null;
+    this.updateUrlParams("groups");
     this.loadGroups();
   }
 
@@ -1725,6 +1872,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
   handleBackToProfiles() {
     this.selectedProfile = null;
+    this.updateUrlParams("userAndProfile", "profile");
     this.loadProfiles();
   }
 
