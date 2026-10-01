@@ -476,6 +476,11 @@
                           onclick={handleAssignment}
                         ></lightning-button>
                       </template>
+                      <template lwc:if={row.noUsersToAssign}>
+                        <span class="slds-text-body_small slds-text-color_weak" title="Cannot assign: no active users have this profile">
+                          No active users
+                        </span>
+                      </template>
                     </div>
                   </td>
                 </tr>

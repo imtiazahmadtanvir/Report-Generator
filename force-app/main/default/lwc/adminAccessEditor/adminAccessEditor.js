@@ -784,6 +784,7 @@ export default class AdminAccessEditor extends NavigationMixin(
           ? !item.isAssigned
           : item.assignedCount < item.totalCount,
         showRemove: item.isAssigned,
+        noUsersToAssign: !isUser && item.totalCount === 0,
         assignLabel: isUser ? "Assign" : "Assign to all users",
         removeLabel: isUser ? "Remove" : "Remove from all users"
       };
