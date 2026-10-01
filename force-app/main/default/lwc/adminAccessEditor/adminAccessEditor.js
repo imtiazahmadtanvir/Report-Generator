@@ -501,6 +501,42 @@ export default class AdminAccessEditor extends NavigationMixin(
     this.objChanges = changes;
   }
 
+  async handleRemoveAllObjectAccess() {
+    if (!this.canEditObjects) return;
+    const confirmed = await LightningConfirm.open({
+      message: `Remove all object access on shown objects for ${this.subjectNoun}?`,
+      label: "Confirm Remove Object Access",
+      theme: "warning"
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    const changes = { ...this.objChanges };
+    const zeroFlags = {
+      canRead: false,
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+      canViewAll: false,
+      canModifyAll: false
+    };
+
+    for (const row of this.objectView.rows) {
+      const item = this.objects.find((o) => o.sobjectType === row.sobjectType);
+      if (!item) continue;
+      const unchanged = OBJECT_PERMS.every(
+        (p) => zeroFlags[p.key] === Boolean(item[p.key])
+      );
+      if (unchanged) {
+        delete changes[row.sobjectType];
+      } else {
+        changes[row.sobjectType] = { ...zeroFlags };
+      }
+    }
+    this.objChanges = changes;
+  }
+
   get objectFilters() {
     return this.filters.objects;
   }
@@ -592,6 +628,34 @@ export default class AdminAccessEditor extends NavigationMixin(
       delete changes[field];
     } else {
       changes[field] = { ...flags, sobjectType: this.fieldObject };
+    }
+    this.fieldChanges = changes;
+  }
+
+  async handleRemoveAllFieldAccess() {
+    if (!this.canEditObjects) return;
+    const confirmed = await LightningConfirm.open({
+      message: `Remove all field access on shown fields for ${this.fieldObject} for ${this.subjectNoun}?`,
+      label: "Confirm Remove Field Access",
+      theme: "warning"
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    const changes = { ...this.fieldChanges };
+    for (const row of this.fieldView.rows) {
+      const item = this.fields.find((f) => f.field === row.field);
+      if (!item) continue;
+      if (!item.canRead && !item.canEdit) {
+        delete changes[row.field];
+      } else {
+        changes[row.field] = {
+          sobjectType: this.fieldObject,
+          canRead: false,
+          canEdit: false
+        };
+      }
     }
     this.fieldChanges = changes;
   }
@@ -871,9 +935,22 @@ export default class AdminAccessEditor extends NavigationMixin(
     };
   }
 
-  handleEntityBulk(event) {
+  async handleEntityBulk(event) {
     const enabled = event.currentTarget.dataset.enabled === "true";
     const entityType = this.activeEntityType;
+    const tabLabel = this.sectionMeta.title || this.activeTab;
+
+    if (!enabled) {
+      const confirmed = await LightningConfirm.open({
+        message: `Remove access to all shown ${tabLabel} for ${this.subjectNoun}?`,
+        label: `Confirm Remove ${tabLabel} Access`,
+        theme: "warning"
+      });
+      if (!confirmed) {
+        return;
+      }
+    }
+
     let changes = { ...this.entityChanges[entityType] };
     this.filteredEntities()
       .filter((item) => !item.isInherited)
@@ -1250,6 +1327,20 @@ export default class AdminAccessEditor extends NavigationMixin(
   get isEntityBulkDisabled() {
     return (
       !this.canEditSetup || Boolean(this.entityView && this.entityView.isEmpty)
+    );
+  }
+
+  get isObjectBulkDisabled() {
+    return (
+      !this.canEditObjects ||
+      Boolean(this.objectView && this.objectView.isEmpty)
+    );
+  }
+
+  get isFieldBulkDisabled() {
+    return (
+      !this.canEditObjects ||
+      Boolean(this.fieldView && this.fieldView.isEmpty)
     );
   }
 

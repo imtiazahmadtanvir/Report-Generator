@@ -84,7 +84,16 @@
             ></lightning-combobox>
           </lightning-layout-item>
         </lightning-layout>
-        <p class="result-count">{objectView.summary}</p>
+        <div class="toolbar-row">
+          <p class="result-count">{objectView.summary}</p>
+          <lightning-button
+            label="Remove all access"
+            icon-name="utility:close"
+            variant="destructive-text"
+            disabled={isObjectBulkDisabled}
+            onclick={handleRemoveAllObjectAccess}
+          ></lightning-button>
+        </div>
 
         <div class="table-scroll">
           <table
@@ -256,7 +265,16 @@
             ></lightning-combobox>
           </lightning-layout-item>
         </lightning-layout>
-        <p class="result-count">{fieldView.summary}</p>
+        <div class="toolbar-row">
+          <p class="result-count">{fieldView.summary}</p>
+          <lightning-button
+            label="Remove all access"
+            icon-name="utility:close"
+            variant="destructive-text"
+            disabled={isFieldBulkDisabled}
+            onclick={handleRemoveAllFieldAccess}
+          ></lightning-button>
+        </div>
 
         <div class="table-scroll">
           <table
