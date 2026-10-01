@@ -151,7 +151,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
   // SECTION 7: APPS STATE
   @track appSearchTerm = "";
-  @track appTypeFilter = "All";
+  @track appTypeFilter = "Custom";
   @track appNavFilter = "All";
   @track allAppsList = [];
   @track appsList = [];
