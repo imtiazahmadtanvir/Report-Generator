@@ -717,6 +717,7 @@
                 target-id={editingPermSetId}
                 initial-tab={editingPermSetInitialTab}
                 onaccesschange={handleEditorAccessChange}
+                onopenuser={handleEditorOpenUser}
               ></c-admin-access-editor>
             </template>
 
@@ -763,6 +764,15 @@
                     </div>
                   </div>
                   <div class="hero-actions">
+                    <lightning-button
+                      label="Manage Access (Apex, Flows, Apps...)"
+                      icon-name="utility:edit"
+                      variant="brand"
+                      class="slds-m-right_small"
+                      data-id={selectedPermSet.permissionSet.id}
+                      data-label={selectedPermSet.permissionSet.label}
+                      onclick={handleOpenPermSetEditor}
+                    ></lightning-button>
                     <lightning-button
                       label="← Back to Permission Sets"
                       icon-name="utility:back"
@@ -1180,6 +1190,7 @@
                         <th>Type</th>
                         <th>License</th>
                         <th class="slds-text-align_center">Users</th>
+                        <th class="slds-text-align_center">Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1189,8 +1200,9 @@
                             <button
                               class="link-name"
                               data-id={ps.id}
+                              data-label={ps.label}
                               onclick={handleViewPermSetDetail}
-                              title="Manage access"
+                              title="access"
                             >
                               {ps.label}
                             </button>
@@ -1205,6 +1217,17 @@
                           </td>
                           <td data-label="Users" class="slds-text-align_center">
                             <span class="badge-count">{ps.userCount}</span>
+                          </td>
+                          <td data-label="Action" class="slds-text-align_center">
+                            <lightning-button
+                              label="Access"
+                              icon-name="utility:edit"
+                              size="small"
+                              variant="neutral"
+                              data-id={ps.id}
+                              data-label={ps.label}
+                              onclick={handleViewPermSetDetail}
+                            ></lightning-button>
                           </td>
                         </tr>
                       </template>

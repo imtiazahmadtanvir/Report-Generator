@@ -1345,9 +1345,12 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     this.loadPermissionSets();
   }
 
-  async handleViewPermSetDetail(event) {
+  handleViewPermSetDetail(event) {
     const psId = event.currentTarget.dataset.id;
-    await this.viewPermSetDetailById(psId);
+    const psLabel =
+      event.currentTarget.dataset.label ||
+      event.currentTarget.innerText.trim();
+    this.openPermSetEditor(psId, psLabel, "objects");
   }
 
   async viewPermSetDetailById(psId) {
