@@ -54,6 +54,14 @@ private class AdminAccessEditorControllerTest {
 
         Assert.isFalse(objects.isEmpty(), 'Permissionable objects should be listed');
         Assert.isFalse(fields.isEmpty(), 'Account should have permissionable fields');
+        Boolean checkedTab = false;
+        for (AdminSecurityDataModel.ObjectAccessItem item : objects) {
+            if (item.hasTab != null) {
+                checkedTab = true;
+                break;
+            }
+        }
+        Assert.isTrue(checkedTab, 'Objects should have hasTab populated');
     }
 
     @isTest
@@ -210,7 +218,7 @@ private class AdminAccessEditorControllerTest {
         Assert.isTrue(ctx.canEditObjectAccess, 'A custom permission set should be editable');
 
         AdminSecurityDataModel.DmlResult objRes = AdminAccessEditorController.saveObjectAccess(PERMSET_TYPE, ps.Id,
-            JSON.serialize(new List<Map<String, Object>>{ new Map<String, Object>{ 'sobjectType' => 'Account', 'canRead' => true } }));
+            JSON.serialize(new List<Map<String, Object>>{ new Map<String, Object>{ 'sobjectType' => 'Account', 'canRead' => true, 'tabVisibility' => 'DefaultOn' } }));
         Assert.isTrue(objRes.success, 'Object access should save directly to the set: ' + objRes.errors);
         Assert.areEqual(1, [SELECT count() FROM ObjectPermissions WHERE ParentId = :ps.Id AND SobjectType = 'Account'],
             'Object permission should be written to the new permission set');

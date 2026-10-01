@@ -3,6 +3,18 @@
  * for the Salesforce Admin Access Console.
  */
 public with sharing class AdminSecurityService {
+  private static List<TabDefinition> cachedTabDefs;
+  private static List<TabDefinition> getTabDefinitions() {
+    if (cachedTabDefs == null) {
+      cachedTabDefs = [
+        SELECT Name, SobjectName, Label, IsCustom
+        FROM TabDefinition
+        WHERE SobjectName != null
+        LIMIT 500
+      ];
+    }
+    return cachedTabDefs;
+  }
   /**
    * @description Verify whether current user has administrative rights to view/modify security
    */
@@ -746,6 +758,20 @@ public with sharing class AdminSecurityService {
     Map<String, Schema.SObjectType> globalDescribe = Schema.getGlobalDescribe();
     List<AdminSecurityDataModel.ObjectPermItem> objectPerms = new List<AdminSecurityDataModel.ObjectPermItem>();
 
+    List<TabDefinition> tabDefs = getTabDefinitions();
+    Map<String, String> objToTab = new Map<String, String>();
+    for (TabDefinition td : tabDefs) {
+      objToTab.put(td.SobjectName.toLowerCase(), td.Name);
+    }
+    Map<String, String> permTabSettings = new Map<String, String>();
+    for (PermissionSetTabSetting pts : [
+      SELECT Name, Visibility
+      FROM PermissionSetTabSetting
+      WHERE ParentId = :permissionSetId
+    ]) {
+      permTabSettings.put(pts.Name.toLowerCase(), pts.Visibility);
+    }
+
     for (ObjectPermissions op : opList) {
       AdminSecurityDataModel.ObjectPermItem item = new AdminSecurityDataModel.ObjectPermItem();
       item.id = op.Id;
@@ -760,6 +786,17 @@ public with sharing class AdminSecurityService {
           .getLabel();
       } else {
         item.sobjectLabel = op.SobjectType;
+      }
+      String tabName = objToTab.get(op.SobjectType.toLowerCase());
+      item.hasTab = (tabName != null);
+      item.tabSettingName = tabName;
+      if (item.hasTab) {
+        String vis = permTabSettings.get(tabName.toLowerCase());
+        item.tabVisibility = (vis != null ? vis : 'Hidden');
+        item.isTabOn = (item.tabVisibility == 'DefaultOn');
+      } else {
+        item.tabVisibility = null;
+        item.isTabOn = false;
       }
       item.permissionsRead = op.PermissionsRead;
       item.permissionsCreate = op.PermissionsCreate;
@@ -1592,6 +1629,22 @@ public with sharing class AdminSecurityService {
     List<ObjectPermissions> opList = Database.query(query);
     Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
 
+    List<TabDefinition> tabDefs = getTabDefinitions();
+    Map<String, String> objToTab = new Map<String, String>();
+    for (TabDefinition td : tabDefs) {
+      objToTab.put(td.SobjectName.toLowerCase(), td.Name);
+    }
+    Map<String, String> permTabSettings = new Map<String, String>();
+    for (PermissionSetTabSetting pts : [
+      SELECT Name, Visibility
+      FROM PermissionSetTabSetting
+      WHERE ParentId IN :permSetIds
+    ]) {
+      if (pts.Visibility == 'DefaultOn' || !permTabSettings.containsKey(pts.Name.toLowerCase())) {
+        permTabSettings.put(pts.Name.toLowerCase(), pts.Visibility);
+      }
+    }
+
     Map<String, AdminSecurityDataModel.ObjectPermItem> mergedMap = new Map<String, AdminSecurityDataModel.ObjectPermItem>();
     for (ObjectPermissions op : opList) {
       if (!mergedMap.containsKey(op.SobjectType)) {
@@ -1608,6 +1661,17 @@ public with sharing class AdminSecurityService {
             .getLabel();
         } else {
           item.sobjectLabel = op.SobjectType;
+        }
+        String tabName = objToTab.get(op.SobjectType.toLowerCase());
+        item.hasTab = (tabName != null);
+        item.tabSettingName = tabName;
+        if (item.hasTab) {
+          String vis = permTabSettings.get(tabName.toLowerCase());
+          item.tabVisibility = (vis != null ? vis : 'Hidden');
+          item.isTabOn = (item.tabVisibility == 'DefaultOn');
+        } else {
+          item.tabVisibility = null;
+          item.isTabOn = false;
         }
         item.permissionsRead = op.PermissionsRead;
         item.permissionsCreate = op.PermissionsCreate;

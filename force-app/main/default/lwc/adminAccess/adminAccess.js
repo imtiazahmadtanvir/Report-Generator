@@ -1525,6 +1525,25 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
           ...u,
           statusClass: u.isActive ? "badge-active" : "badge-inactive"
         }));
+        detail.objectPermissions = (detail.objectPermissions || []).map(
+          (op) => ({
+            ...op,
+            tabBadgeLabel: op.hasTab
+              ? op.isTabOn
+                ? "Tab On"
+                : op.tabVisibility === "DefaultOff"
+                ? "Tab Off"
+                : "Hidden"
+              : "—",
+            tabBadgeClass: op.hasTab
+              ? op.isTabOn
+                ? "slds-badge slds-theme_success"
+                : op.tabVisibility === "DefaultOff"
+                ? "slds-badge slds-badge_lightest"
+                : "slds-badge slds-badge_inverse"
+              : "perm-check-false"
+          })
+        );
       }
       this.selectedPermSet = detail;
     } catch (error) {
@@ -1913,7 +1932,21 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
       this.objPermItems = ((res && res.records) || []).map((op) => ({
         ...op,
         typeClass: op.isCustomObject ? "badge-custom" : "badge-standard",
-        typeBadge: op.isCustomObject ? "Custom" : "Standard"
+        typeBadge: op.isCustomObject ? "Custom" : "Standard",
+        tabBadgeLabel: op.hasTab
+          ? op.isTabOn
+            ? "Tab On"
+            : op.tabVisibility === "DefaultOff"
+            ? "Tab Off"
+            : "Hidden"
+          : "—",
+        tabBadgeClass: op.hasTab
+          ? op.isTabOn
+            ? "slds-badge slds-theme_success"
+            : op.tabVisibility === "DefaultOff"
+            ? "slds-badge slds-badge_lightest"
+            : "slds-badge slds-badge_inverse"
+          : "perm-check-false"
       }));
       this.totals = { ...this.totals, objects: res ? res.totalCount : 0 };
     } catch (error) {

@@ -103,6 +103,9 @@
             <thead>
               <tr class="slds-line-height_reset">
                 <th scope="col"><div class="slds-truncate">Object</div></th>
+                <th scope="col" class="slds-text-align_center">
+                  <div class="slds-truncate">Tab</div>
+                </th>
                 <template for:each={objectPermColumns} for:item="col">
                   <th key={col.key} scope="col" class="slds-text-align_center">
                     <div class="slds-truncate">{col.label}</div>
@@ -128,6 +131,16 @@
                       >
                     </div>
                   </th>
+                  <td data-label="Tab" class="slds-text-align_center tab-cell">
+                    <template lwc:if={row.hasTab}>
+                      <span class={row.tabBadgeClass} title={row.tabTitle}>
+                        {row.tabBadgeLabel}
+                      </span>
+                    </template>
+                    <template lwc:else>
+                      <span class="tab-badge-none" title="No tab defined for this object">—</span>
+                    </template>
+                  </td>
                   <template for:each={row.cells} for:item="cell">
                     <td
                       key={cell.key}

@@ -765,6 +765,19 @@ public with sharing class AdminAccessEditorService {
     return result;
   }
 
+  private static List<TabDefinition> cachedTabDefs;
+  private static List<TabDefinition> getTabDefinitions() {
+    if (cachedTabDefs == null) {
+      cachedTabDefs = [
+        SELECT Name, SobjectName, Label, IsCustom
+        FROM TabDefinition
+        WHERE SobjectName != null
+        LIMIT 500
+      ];
+    }
+    return cachedTabDefs;
+  }
+
   public static List<AdminSecurityDataModel.ObjectAccessItem> getObjectAccess(
     String targetType,
     Id targetId
@@ -772,12 +785,26 @@ public with sharing class AdminAccessEditorService {
     Target t = resolve(targetType, targetId);
     Map<String, String> objects = permissionableObjects();
 
+    List<TabDefinition> tabDefs = getTabDefinitions();
+    Map<String, TabDefinition> objectTabMap = new Map<String, TabDefinition>();
+    Map<String, String> tabNameToSobj = new Map<String, String>();
+    for (TabDefinition td : tabDefs) {
+      objectTabMap.put(td.SobjectName.toLowerCase(), td);
+      tabNameToSobj.put(td.Name.toLowerCase(), td.SobjectName.toLowerCase());
+    }
+
     Map<String, AdminSecurityDataModel.ObjectAccessItem> byObject = new Map<String, AdminSecurityDataModel.ObjectAccessItem>();
     for (String sobjectType : objects.keySet()) {
       AdminSecurityDataModel.ObjectAccessItem item = new AdminSecurityDataModel.ObjectAccessItem();
       item.sobjectType = sobjectType;
       item.label = objects.get(sobjectType);
       item.isCustom = sobjectType.endsWith('__c');
+      TabDefinition td = objectTabMap.get(sobjectType.toLowerCase());
+      item.hasTab = (td != null);
+      item.tabSettingName = (td != null ? td.Name : null);
+      item.tabVisibility = (td != null ? 'Hidden' : null);
+      item.isTabOn = false;
+      item.inhTabOn = false;
       item.canRead = false;
       item.canCreate = false;
       item.canEdit = false;
@@ -835,6 +862,44 @@ public with sharing class AdminAccessEditorService {
         }
         sourcesByObject.get(op.SobjectType).add(op.ParentId);
       }
+
+      for (PermissionSetTabSetting pts : [
+        SELECT ParentId, Name, Visibility
+        FROM PermissionSetTabSetting
+        WHERE ParentId IN :parentIds
+      ]) {
+        String sobjKey = tabNameToSobj.get(pts.Name.toLowerCase());
+        if (sobjKey == null) {
+          if (pts.Name.endsWith('__c') && byObject.containsKey(pts.Name)) {
+            sobjKey = pts.Name.toLowerCase();
+          } else if (pts.Name.startsWith('standard-')) {
+            String stripped = pts.Name.substring(9).toLowerCase();
+            if (byObject.containsKey(stripped)) {
+              sobjKey = stripped;
+            }
+          }
+        }
+        if (sobjKey != null) {
+          for (String realKey : byObject.keySet()) {
+            if (realKey.equalsIgnoreCase(sobjKey)) {
+              AdminSecurityDataModel.ObjectAccessItem item = byObject.get(realKey);
+              if (pts.ParentId == t.editPermSetId) {
+                item.tabVisibility = pts.Visibility;
+                item.isTabOn = (pts.Visibility == 'DefaultOn');
+              } else {
+                if (pts.Visibility == 'DefaultOn') {
+                  item.inhTabOn = true;
+                  item.tabVisibility = 'DefaultOn';
+                  item.isTabOn = true;
+                } else if (item.tabVisibility == 'Hidden') {
+                  item.tabVisibility = pts.Visibility;
+                }
+              }
+              break;
+            }
+          }
+        }
+      }
     }
 
     List<AdminSecurityDataModel.ObjectAccessItem> items = byObject.values();
@@ -867,6 +932,80 @@ public with sharing class AdminAccessEditorService {
     }
 
     ensureEditPermSet(t);
+
+    Integer applied = 0;
+    List<String> errors = new List<String>();
+
+    // Handle any Tab Setting changes
+    List<TabDefinition> tabDefs = getTabDefinitions();
+    Map<String, String> objToTabName = new Map<String, String>();
+    for (TabDefinition td : tabDefs) {
+      objToTabName.put(td.SobjectName.toLowerCase(), td.Name);
+    }
+
+    Set<String> tabNamesToHandle = new Set<String>();
+    for (AdminSecurityDataModel.ObjectAccessChange c : changes) {
+      if (String.isNotBlank(c.tabVisibility)) {
+        String tName = objToTabName.get(c.sobjectType.toLowerCase());
+        if (tName == null) {
+          tName = c.sobjectType.endsWith('__c') ? c.sobjectType : ('standard-' + c.sobjectType);
+        }
+        tabNamesToHandle.add(tName);
+      }
+    }
+
+    if (!tabNamesToHandle.isEmpty()) {
+      Map<String, PermissionSetTabSetting> existingTabs = new Map<String, PermissionSetTabSetting>();
+      for (PermissionSetTabSetting pts : [
+        SELECT Id, Name, Visibility
+        FROM PermissionSetTabSetting
+        WHERE ParentId = :t.editPermSetId AND Name IN :tabNamesToHandle
+      ]) {
+        existingTabs.put(pts.Name.toLowerCase(), pts);
+      }
+
+      List<PermissionSetTabSetting> tabsToUpsert = new List<PermissionSetTabSetting>();
+      List<String> tabUpsertKeys = new List<String>();
+      List<PermissionSetTabSetting> tabsToDelete = new List<PermissionSetTabSetting>();
+      List<String> tabDeleteKeys = new List<String>();
+
+      for (AdminSecurityDataModel.ObjectAccessChange c : changes) {
+        if (String.isNotBlank(c.tabVisibility)) {
+          String tName = objToTabName.get(c.sobjectType.toLowerCase());
+          if (tName == null) {
+            tName = c.sobjectType.endsWith('__c') ? c.sobjectType : ('standard-' + c.sobjectType);
+          }
+          PermissionSetTabSetting existingPts = existingTabs.get(tName.toLowerCase());
+          if (c.tabVisibility == 'DefaultOn' || c.tabVisibility == 'DefaultOff') {
+            if (existingPts != null) {
+              if (existingPts.Visibility != c.tabVisibility) {
+                existingPts.Visibility = c.tabVisibility;
+                tabsToUpsert.add(existingPts);
+                tabUpsertKeys.add(c.sobjectType + ' (Tab: ' + c.tabVisibility + ')');
+              }
+            } else {
+              tabsToUpsert.add(new PermissionSetTabSetting(
+                ParentId = t.editPermSetId,
+                Name = tName,
+                Visibility = c.tabVisibility
+              ));
+              tabUpsertKeys.add(c.sobjectType + ' (Tab: ' + c.tabVisibility + ')');
+            }
+          } else if (c.tabVisibility == 'Hidden') {
+            if (existingPts != null) {
+              tabsToDelete.add(existingPts);
+              tabDeleteKeys.add(c.sobjectType + ' (Tab: Hidden)');
+            }
+          }
+        }
+      }
+      if (!tabsToUpsert.isEmpty()) {
+        applied += collectUpsertErrors(Database.upsert(tabsToUpsert, false), tabUpsertKeys, errors);
+      }
+      if (!tabsToDelete.isEmpty()) {
+        applied += collectDeleteErrors(Database.delete(tabsToDelete, false), tabDeleteKeys, errors);
+      }
+    }
 
     Set<String> sobjectTypes = new Set<String>();
     for (AdminSecurityDataModel.ObjectAccessChange c : changes) {
@@ -911,17 +1050,18 @@ public with sharing class AdminAccessEditorService {
       keys.add(c.sobjectType);
     }
 
-    List<String> errors = new List<String>();
-    Integer applied = collectUpsertErrors(
-      Database.upsert(toUpsert, false),
-      keys,
-      errors
-    );
+    if (!toUpsert.isEmpty()) {
+      applied += collectUpsertErrors(
+        Database.upsert(toUpsert, false),
+        keys,
+        errors
+      );
+    }
     return buildResult(
       applied,
       errors,
       applied +
-        ' object permission change(s) saved to ' +
+        ' change(s) saved to ' +
         t.editPermSetLabel +
         '.'
     );

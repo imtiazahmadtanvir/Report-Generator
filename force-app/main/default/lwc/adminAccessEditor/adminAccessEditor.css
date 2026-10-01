@@ -439,3 +439,67 @@
     width: 100%;
   }
 }
+
+/* ---- Tab Setting column & badges ------------------------------------------ */
+.tab-cell {
+  min-width: 7.25rem;
+  padding: 0.35rem 0.5rem !important;
+}
+
+.tab-select {
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.22rem 0.45rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--card-border-strong);
+  background-color: #ffffff;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  outline: none;
+  font-family: inherit;
+  display: inline-block;
+}
+
+.tab-select:focus {
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 2px var(--brand-blue-border);
+}
+
+.tab-select:disabled {
+  background-color: #f8fafc;
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.tab-badge_on {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.tab-badge_off {
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.tab-badge-none {
+  color: #94a3b8;
+  font-weight: 600;
+  font-size: 0.85rem;
+}

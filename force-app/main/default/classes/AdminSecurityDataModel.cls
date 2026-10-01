@@ -290,6 +290,14 @@ public with sharing class AdminSecurityDataModel {
     public Boolean isEditable { get; set; } // true only if custom permission set
     @AuraEnabled
     public String source { get; set; } // where user got this permission
+    @AuraEnabled
+    public Boolean hasTab { get; set; }
+    @AuraEnabled
+    public String tabVisibility { get; set; } // 'DefaultOn', 'DefaultOff', 'Hidden', or null
+    @AuraEnabled
+    public String tabSettingName { get; set; }
+    @AuraEnabled
+    public Boolean isTabOn { get; set; }
 
     public Integer compareTo(Object compareTo) {
       ObjectPermItem other = (ObjectPermItem) compareTo;
@@ -622,6 +630,16 @@ public with sharing class AdminSecurityDataModel {
     public Boolean inhModifyAll { get; set; }
     @AuraEnabled
     public String sources { get; set; }
+    @AuraEnabled
+    public Boolean hasTab { get; set; }
+    @AuraEnabled
+    public String tabVisibility { get; set; } // 'DefaultOn', 'DefaultOff', 'Hidden', or null
+    @AuraEnabled
+    public String tabSettingName { get; set; }
+    @AuraEnabled
+    public Boolean isTabOn { get; set; }
+    @AuraEnabled
+    public Boolean inhTabOn { get; set; }
 
     public Integer compareTo(Object compareTo) {
       ObjectAccessItem other = (ObjectAccessItem) compareTo;
@@ -684,6 +702,7 @@ public with sharing class AdminSecurityDataModel {
     public Boolean canDelete;
     public Boolean canViewAll;
     public Boolean canModifyAll;
+    public String tabVisibility; // 'DefaultOn', 'DefaultOff', 'Hidden'
   }
 
   public class FieldAccessChange {

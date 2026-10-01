@@ -900,6 +900,7 @@
                           <tr>
                             <th>Object</th>
                             <th>API Name</th>
+                            <th class="slds-text-align_center">Tab</th>
                             <th class="slds-text-align_center">Read</th>
                             <th class="slds-text-align_center">Create</th>
                             <th class="slds-text-align_center">Edit</th>
@@ -921,6 +922,14 @@
                                 </td>
                                 <td data-label="API Name">
                                   <code>{op.sobjectType}</code>
+                                </td>
+                                <td data-label="Tab" class="slds-text-align_center">
+                                  <template lwc:if={op.hasTab}>
+                                    <span class={op.tabBadgeClass}>{op.tabBadgeLabel}</span>
+                                  </template>
+                                  <template lwc:else>
+                                    <span class="perm-check-false">—</span>
+                                  </template>
                                 </td>
                                 <td
                                   data-label="Read"
@@ -1685,6 +1694,7 @@
                     <th>Object Label</th>
                     <th>API Name</th>
                     <th>Type</th>
+                    <th class="slds-text-align_center">Tab</th>
                     <th class="slds-text-align_center">Read</th>
                     <th class="slds-text-align_center">Create</th>
                     <th class="slds-text-align_center">Edit</th>
@@ -1705,6 +1715,14 @@
                         </td>
                         <td data-label="Type">
                           <span class={op.typeClass}>{op.typeBadge}</span>
+                        </td>
+                        <td data-label="Tab" class="slds-text-align_center">
+                          <template lwc:if={op.hasTab}>
+                            <span class={op.tabBadgeClass}>{op.tabBadgeLabel}</span>
+                          </template>
+                          <template lwc:else>
+                            <span class="perm-check-false">—</span>
+                          </template>
                         </td>
                         <td data-label="Read" class="slds-text-align_center">
                           <template lwc:if={op.permissionsRead}

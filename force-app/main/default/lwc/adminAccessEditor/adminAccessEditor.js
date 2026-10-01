@@ -393,11 +393,8 @@ export default class AdminAccessEditor extends NavigationMixin(
 
   handleNavClick(event) {
     const tab = event.currentTarget.dataset.tab;
-    if (tab === this.activeTab) {
-      return;
-    }
     this.activeTab = tab;
-    this.loadTab(tab);
+    this.loadTab(tab, true);
   }
 
   handleFilterChange(event) {
@@ -490,10 +487,10 @@ export default class AdminAccessEditor extends NavigationMixin(
     });
 
     const changes = { ...this.objChanges };
-    const unchanged = OBJECT_PERMS.every(
+    const unchangedPerms = OBJECT_PERMS.every(
       (p) => flags[p.key] === Boolean(item[p.key])
     );
-    if (unchanged) {
+    if (unchangedPerms) {
       delete changes[object];
     } else {
       changes[object] = flags;
@@ -568,27 +565,49 @@ export default class AdminAccessEditor extends NavigationMixin(
       matches.push({ item, own });
     }
 
-    const rows = matches.slice(0, f.limit).map(({ item, own }) => ({
-      sobjectType: item.sobjectType,
-      label: item.label,
-      isCustom: item.isCustom,
-      sources: item.sources,
-      sourcesLabel: item.sources || "—",
-      rowClass: this.objChanges[item.sobjectType] ? "row-dirty" : "",
-      cells: OBJECT_PERMS.map((p) => {
-        const inherited = Boolean(item[p.inh]);
-        return {
-          key: p.key,
-          label: p.label,
-          id: `obj-${item.sobjectType}-${p.key}`,
-          checked: own[p.key] || inherited,
-          disabled: !canEdit || inherited,
-          title: inherited
-            ? `${p.label} is granted by: ${item.sources}`
-            : p.label
-        };
-      })
-    }));
+    const rows = matches.slice(0, f.limit).map(({ item, own }) => {
+      const isTabOn = Boolean(item.isTabOn || item.inhTabOn);
+      const tabBadgeLabel = item.hasTab ? (isTabOn ? "Tab On" : "Tab Off") : "—";
+      const tabBadgeClass = item.hasTab
+        ? isTabOn
+          ? "tab-badge tab-badge_on"
+          : "tab-badge tab-badge_off"
+        : "tab-badge-none";
+      const tabTitle = item.hasTab
+        ? item.inhTabOn
+          ? `Tab is enabled via: ${item.sources}`
+          : isTabOn
+          ? "Tab is ON"
+          : "Tab is OFF"
+        : "No tab defined for this object";
+
+      return {
+        sobjectType: item.sobjectType,
+        label: item.label,
+        isCustom: item.isCustom,
+        sources: item.sources,
+        sourcesLabel: item.sources || "—",
+        hasTab: item.hasTab,
+        isTabOn,
+        tabBadgeLabel,
+        tabBadgeClass,
+        tabTitle,
+        rowClass: this.objChanges[item.sobjectType] ? "row-dirty" : "",
+        cells: OBJECT_PERMS.map((p) => {
+          const inherited = Boolean(item[p.inh]);
+          return {
+            key: p.key,
+            label: p.label,
+            id: `obj-${item.sobjectType}-${p.key}`,
+            checked: own[p.key] || inherited,
+            disabled: !canEdit || inherited,
+            title: inherited
+              ? `${p.label} is granted by: ${item.sources}`
+              : p.label
+          };
+        })
+      };
+    });
 
     return this.buildView(rows, matches.length, this.objects.length, "objects");
   }
