@@ -951,7 +951,7 @@ public with sharing class AdminAccessEditorService {
     Map<String, AdminSecurityDataModel.FieldAccessItem> byField = new Map<String, AdminSecurityDataModel.FieldAccessItem>();
     for (Schema.SObjectField f : objDescribe.fields.getMap().values()) {
       Schema.DescribeFieldResult fd = f.getDescribe();
-      if (!fd.isPermissionable()) {
+      if (!fd.isPermissionable() || String.isNotBlank(fd.getCompoundFieldName())) {
         continue;
       }
       AdminSecurityDataModel.FieldAccessItem item = new AdminSecurityDataModel.FieldAccessItem();
@@ -1436,6 +1436,11 @@ public with sharing class AdminAccessEditorService {
     String message = dbErrors.isEmpty()
       ? 'Unknown error'
       : dbErrors[0].getMessage();
+    if (message.contains('bad value for restricted picklist field')) {
+      message = 'This field does not support Field-Level Security.';
+    } else if (message.contains('user license doesn\'t allow')) {
+      message = 'The user license does not include this feature. Assign the required Feature/Permission Set License (PSL) first.';
+    }
     errors.add(key + ': ' + message);
   }
 

@@ -155,9 +155,9 @@ const SECTION_META = {
   }
 };
 
-const newFilters = () => ({
+const newFilters = (defaultType = "all") => ({
   search: "",
-  type: "all",
+  type: defaultType,
   access: "all",
   limit: PAGE_SIZE
 });
@@ -187,8 +187,8 @@ export default class AdminAccessEditor extends NavigationMixin(
   @track psUsers = [];
 
   @track filters = {
-    objects: newFilters(),
-    fields: newFilters(),
+    objects: newFilters("custom"),
+    fields: newFilters("custom"),
     permSets: newFilters(),
     groups: newFilters(),
     apps: newFilters(),
@@ -278,6 +278,17 @@ export default class AdminAccessEditor extends NavigationMixin(
     this.loaded = {};
     this.objects = [];
     this.fields = [];
+    this.filters = {
+      objects: newFilters("custom"),
+      fields: newFilters("custom"),
+      permSets: newFilters(),
+      groups: newFilters(),
+      apps: newFilters(),
+      apex: newFilters(),
+      flows: newFilters(),
+      recordTypes: newFilters(),
+      psUsers: newFilters()
+    };
     this.discardChanges();
     this.loadContext();
     this.loadTab(this.activeTab);
@@ -414,14 +425,14 @@ export default class AdminAccessEditor extends NavigationMixin(
 
   handleOpenFields(event) {
     this.fieldObject = event.currentTarget.dataset.object;
-    this.filters = { ...this.filters, fields: newFilters() };
+    this.filters = { ...this.filters, fields: newFilters("custom") };
     this.activeTab = "fields";
     this.loadTab("fields", true);
   }
 
   handleFieldObjectChange(event) {
     this.fieldObject = event.detail.value;
-    this.filters = { ...this.filters, fields: newFilters() };
+    this.filters = { ...this.filters, fields: newFilters("custom") };
     this.loadTab("fields", true);
   }
 
