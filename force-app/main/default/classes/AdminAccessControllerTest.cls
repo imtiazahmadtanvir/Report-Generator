@@ -38,6 +38,8 @@ private class AdminAccessControllerTest {
         Assert.isTrue(overview.totalUsers > 0, 'Total users should be greater than zero');
         Assert.isTrue(overview.isAuthorizedAdmin, 'Current user should be authorized admin');
         Assert.isNotNull(overview.currentAdminName, 'Admin name should be populated');
+        Assert.isTrue(overview.totalObjects > 0, 'Total objects should be greater than zero');
+        Assert.isTrue(overview.totalFields > 0, 'Total fields should be greater than zero');
     }
 
     @isTest

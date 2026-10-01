@@ -2463,6 +2463,22 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
         value: o.totalApps,
         meta: "Lightning and connected",
         title: "Open App Security"
+      },
+      {
+        key: "stat-objects",
+        tab: "objects",
+        label: "Objects",
+        value: o.totalObjects,
+        meta: `${o.customObjects || 0} custom`,
+        title: "Open Object Access"
+      },
+      {
+        key: "stat-fields",
+        tab: "fields",
+        label: "Fields",
+        value: o.totalFields,
+        meta: `${o.customFields || 0} custom`,
+        title: "Open Field-Level Security"
       }
     ];
   }

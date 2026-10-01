@@ -18,6 +18,14 @@ public with sharing class AdminSecurityDataModel {
     @AuraEnabled
     public Integer totalApps { get; set; }
     @AuraEnabled
+    public Integer totalObjects { get; set; }
+    @AuraEnabled
+    public Integer customObjects { get; set; }
+    @AuraEnabled
+    public Integer totalFields { get; set; }
+    @AuraEnabled
+    public Integer customFields { get; set; }
+    @AuraEnabled
     public String currentAdminName { get; set; }
     @AuraEnabled
     public String currentAdminProfile { get; set; }

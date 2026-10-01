@@ -74,6 +74,43 @@ public with sharing class AdminSecurityService {
       FROM AppMenuItem
       WHERE Type = 'TabSet' OR Type = 'ConnectedApplication'
     ];
+
+    Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
+    Integer totalObjs = 0;
+    Integer customObjs = 0;
+    Integer totalFields = 0;
+    Integer customFields = 0;
+
+    for (
+      Schema.PicklistEntry pe : ObjectPermissions.SobjectType.getDescribe()
+        .getPicklistValues()
+    ) {
+      String val = pe.getValue();
+      String lk = val.toLowerCase();
+      if (gd.containsKey(lk)) {
+        totalObjs++;
+        if (lk.endsWith('__c')) {
+          customObjs++;
+        }
+        Schema.SObjectType st = gd.get(lk);
+        try {
+          Map<String, Schema.SObjectField> fMap = st.getDescribe()
+            .fields.getMap();
+          for (String fKey : fMap.keySet()) {
+            totalFields++;
+            if (fKey.endsWith('__c')) {
+              customFields++;
+            }
+          }
+        } catch (Exception e) {
+        }
+      }
+    }
+    overview.totalObjects = totalObjs;
+    overview.customObjects = customObjs;
+    overview.totalFields = totalFields;
+    overview.customFields = customFields;
+
     overview.currentAdminName = UserInfo.getName();
 
     List<User> curUser = [
