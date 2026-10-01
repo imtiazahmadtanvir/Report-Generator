@@ -119,12 +119,15 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
   // SECTION 4: PROFILES STATE
   @track profileSearchTerm = "";
-  @track profileTypeFilter = "All";
+  @track profileTypeFilter = "Custom";
   @track profileTypeOptions = [
     { label: "All Profiles", value: "All" },
     { label: "Custom Profiles", value: "Custom" },
     { label: "Standard Profiles", value: "Standard" }
   ];
+  @track profileLicenseFilter = "All";
+  @track profileLicenseOptions = [{ label: "All Licenses", value: "All" }];
+  allProfilesList = [];
   @track profilesList = [];
   @track selectedProfile = null;
 
@@ -372,14 +375,23 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
       typeLabel: p.isCustom ? "Custom" : "Standard",
       typeClass: p.isCustom ? "badge-custom" : "badge-standard"
     }));
+    this.allProfilesList = mapped;
 
-    if (this.profileTypeFilter === "Custom") {
-      this.profilesList = mapped.filter((p) => p.isCustom);
-    } else if (this.profileTypeFilter === "Standard") {
-      this.profilesList = mapped.filter((p) => !p.isCustom);
-    } else {
-      this.profilesList = mapped;
+    if (this.profileLicenseOptions.length <= 1) {
+      const licenses = [
+        ...new Set(
+          mapped
+            .map((p) => p.userLicenseName)
+            .filter((lic) => lic && lic !== "None")
+        )
+      ].sort();
+      this.profileLicenseOptions = [
+        { label: "All Licenses", value: "All" },
+        ...licenses.map((lic) => ({ label: lic, value: lic }))
+      ];
     }
+
+    this.applyProfileFilters();
 
     const options = [{ label: "All Profiles", value: "" }];
     for (const p of mapped) {
@@ -387,6 +399,24 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     }
     this.profileOptions = options;
     this.updateTargetDropdowns();
+  }
+
+  applyProfileFilters() {
+    let filtered = this.allProfilesList;
+
+    if (this.profileTypeFilter === "Custom") {
+      filtered = filtered.filter((p) => p.isCustom);
+    } else if (this.profileTypeFilter === "Standard") {
+      filtered = filtered.filter((p) => !p.isCustom);
+    }
+
+    if (this.profileLicenseFilter && this.profileLicenseFilter !== "All") {
+      filtered = filtered.filter(
+        (p) => p.userLicenseName === this.profileLicenseFilter
+      );
+    }
+
+    this.profilesList = filtered;
   }
 
   async loadObjects() {
@@ -1070,7 +1100,8 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
         this.userProfileFilter = "";
         this.userStatusFilter = "All";
         this.profileSearchTerm = "";
-        this.profileTypeFilter = "All";
+        this.profileTypeFilter = "Custom";
+        this.profileLicenseFilter = "All";
         this.pages = { ...this.pages, users: 1 };
         this.isLoading = true;
         try {
@@ -1631,7 +1662,12 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
 
   handleProfileTypeFilterChange(event) {
     this.profileTypeFilter = event.detail.value;
-    this.loadProfiles();
+    this.applyProfileFilters();
+  }
+
+  handleProfileLicenseFilterChange(event) {
+    this.profileLicenseFilter = event.detail.value;
+    this.applyProfileFilters();
   }
 
   async handleViewProfileDetail(event) {

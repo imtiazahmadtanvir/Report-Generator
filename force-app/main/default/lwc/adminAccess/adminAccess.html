@@ -302,6 +302,15 @@
                         onchange={handleProfileTypeFilterChange}
                       ></lightning-combobox>
                     </div>
+                    <div class="filter-combo-box">
+                      <lightning-combobox
+                        label="License Filter"
+                        variant="label-hidden"
+                        value={profileLicenseFilter}
+                        options={profileLicenseOptions}
+                        onchange={handleProfileLicenseFilterChange}
+                      ></lightning-combobox>
+                    </div>
                   </div>
                   <div class="toolbar-actions">
                     <span class="slds-text-body_small slds-text-color_weak">
