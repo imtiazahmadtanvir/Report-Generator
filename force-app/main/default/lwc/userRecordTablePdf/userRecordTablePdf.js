@@ -6,6 +6,7 @@ import getDynamicObjectRecords from "@salesforce/apex/UserRecordPdfController.ge
 import {
   generatePdfBlob,
   generateCsvBlob,
+  generateXlsxBlob,
   downloadBlobAsFile
 } from "./pdfBuilder";
 
@@ -62,8 +63,8 @@ export default class UserRecordTablePdf extends LightningElement {
   @track isExportModalOpen = false;
   @track isPreviewModalOpen = false;
 
-  // PDF & CSV Export Options
-  @track exportFormat = "pdf"; // 'pdf' or 'csv'
+  // PDF, Excel & CSV Export Options
+  @track exportFormat = "pdf"; // 'pdf', 'xlsx', or 'csv'
   @track pdfTitle = "";
   @track pdfOrientation = "landscape";
   @track exportScopeOption = "auto";
@@ -551,6 +552,20 @@ export default class UserRecordTablePdf extends LightningElement {
           `Downloaded ${filename} successfully (${recordsToExport.length} records)!`,
           "success"
         );
+      } else if (this.isFormatXlsx) {
+        // Generate Native OpenXML Excel (.xlsx) Workbook
+        const xlsxBlob = generateXlsxBlob(
+          this.columns,
+          recordsToExport,
+          this.selectedObjectLabel
+        );
+        const filename = `${sanitizedTitle}_${timestamp}.xlsx`;
+        downloadBlobAsFile(xlsxBlob, filename);
+        this.showToast(
+          "Success",
+          `Downloaded ${filename} successfully (${recordsToExport.length} records)!`,
+          "success"
+        );
       } else {
         // Generate Multi-Page PDF Document
         const cleanScopeLabel =
@@ -850,6 +865,7 @@ export default class UserRecordTablePdf extends LightningElement {
   get exportFormatOptions() {
     return [
       { label: "PDF Document (.pdf)", value: "pdf" },
+      { label: "Excel Spreadsheet (.xlsx)", value: "xlsx" },
       { label: "CSV Spreadsheet (.csv)", value: "csv" }
     ];
   }
@@ -858,34 +874,53 @@ export default class UserRecordTablePdf extends LightningElement {
     return this.exportFormat === "pdf";
   }
 
+  get isFormatXlsx() {
+    return this.exportFormat === "xlsx";
+  }
+
   get isFormatCsv() {
     return this.exportFormat === "csv";
   }
 
   get exportModalTitle() {
-    return this.isFormatPdf ? "Download PDF Export" : "Download CSV Export";
+    if (this.isFormatPdf) return "Download PDF Export";
+    if (this.isFormatXlsx) return "Download Excel Export (.xlsx)";
+    return "Download CSV Export";
   }
 
   get exportModalSubtitle() {
-    return this.isFormatPdf
-      ? "Configure your PDF report options, orientation, and pagination."
-      : "Export clean spreadsheet data using your configured column order.";
+    if (this.isFormatPdf) {
+      return "Configure your PDF report options, orientation, and pagination.";
+    }
+    if (this.isFormatXlsx) {
+      return "Export styled Microsoft Excel (.xlsx) workbook with your configured columns.";
+    }
+    return "Export clean spreadsheet data using your configured column order.";
   }
 
   get exportModalIcon() {
-    return this.isFormatPdf ? "utility:pdf_ext" : "utility:table";
+    if (this.isFormatPdf) return "utility:pdf_ext";
+    if (this.isFormatXlsx) return "utility:file";
+    return "utility:table";
   }
 
   get downloadButtonIcon() {
-    return this.isFormatPdf ? "utility:download" : "utility:table";
+    if (this.isFormatPdf) return "utility:download";
+    if (this.isFormatXlsx) return "utility:file";
+    return "utility:table";
   }
 
   get headerDownloadButtonLabel() {
-    return this.isFormatPdf ? "Download PDF" : "Download CSV";
+    if (this.isFormatPdf) return "Download PDF";
+    if (this.isFormatXlsx) return "Download Excel";
+    return "Download CSV";
   }
 
   get exportButtonLabel() {
     const count = this.recordsToExport.length;
+    if (this.isFormatXlsx) {
+      return `Download Excel (${count} Records)`;
+    }
     if (this.isFormatCsv) {
       return `Download CSV (${count} Records)`;
     }

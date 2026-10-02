@@ -1562,6 +1562,16 @@
   --slds-c-icon-color-foreground-default: #16a34a;
 }
 
+.excel-notice-box {
+  background: #f0fdf4 !important;
+  border-color: #a7f3d0 !important;
+  color: #065f46 !important;
+}
+
+.excel-notice-box lightning-icon {
+  --slds-c-icon-color-foreground-default: #107c41;
+}
+
 .format-switcher-box {
   background: #f8fafc;
   border: 1px solid #e2e8f0;

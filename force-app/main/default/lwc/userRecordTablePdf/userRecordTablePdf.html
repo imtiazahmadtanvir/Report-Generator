@@ -99,7 +99,7 @@
             <lightning-button-icon
               icon-name="utility:settings"
               alternative-text="Export Settings"
-              title="Configure Export Format (PDF / CSV)"
+              title="Configure Export Format (PDF / Excel / CSV)"
               onclick={handleOpenExportModal}
               disabled={isTableEmpty}
               variant="border-filled"
@@ -843,6 +843,12 @@
                   >
                 </div>
               </template>
+              <template lwc:if={isFormatXlsx}>
+                <div class="summary-metric">
+                  <span class="summary-title">Format:</span>
+                  <span class="summary-val text-brand">Excel (.xlsx)</span>
+                </div>
+              </template>
               <template lwc:if={isFormatCsv}>
                 <div class="summary-metric">
                   <span class="summary-title">Format:</span>
@@ -856,7 +862,7 @@
             </div>
 
             <div class="slds-form slds-m-top_medium">
-              <!-- FORMAT SWITCHER (PDF vs CSV) -->
+              <!-- FORMAT SWITCHER (PDF vs Excel vs CSV) -->
               <div class="format-switcher-box slds-m-bottom_medium">
                 <label
                   class="slds-form-element__label slds-text-title_bold slds-m-bottom_xx-small"
@@ -931,6 +937,23 @@
                     <strong>{pdfRowsPerPage} rows per page</strong>, the
                     generated PDF will have exactly
                     <strong>{pdfTotalPagesLabel}</strong>.</span
+                  >
+                </div>
+              </template>
+
+              <!-- EXCEL-SPECIFIC NOTICE -->
+              <template lwc:if={isFormatXlsx}>
+                <div class="export-notice-box excel-notice-box">
+                  <lightning-icon
+                    icon-name="utility:file"
+                    size="x-small"
+                    class="slds-m-right_x-small"
+                  ></lightning-icon>
+                  <span
+                    >Exporting
+                    <strong>{recordsToExport.length} records</strong> across
+                    <strong>{columns.length} columns</strong> as a native Microsoft Excel
+                    (<strong>.xlsx</strong>) workbook with styled headers and auto-sized columns.</span
                   >
                 </div>
               </template>
