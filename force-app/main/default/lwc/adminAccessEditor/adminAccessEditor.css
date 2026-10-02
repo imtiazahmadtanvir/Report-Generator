@@ -69,14 +69,18 @@
 /* ---- Category navigation (clean modern tabs) ----------------------------- */
 .cat-nav {
   display: flex;
-  gap: 0.25rem;
-  padding: 0 0.25rem;
+  width: 100%;
+  box-sizing: border-box;
+  gap: 0;
+  padding: 0;
   margin-bottom: 1rem;
   background: transparent;
   border-bottom: 2px solid #e2e8f0;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 .cat-nav::-webkit-scrollbar {
@@ -86,9 +90,10 @@
 .cat-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  flex: 0 0 auto;
-  padding: 0.65rem 1rem;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.75rem 0.5rem;
   border: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
@@ -99,6 +104,11 @@
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
+  box-sizing: border-box;
+  text-align: center;
+  gap: 0.45rem;
+  border-radius: 4px 4px 0 0;
+  user-select: none;
 }
 
 .cat-pill:hover {
@@ -116,11 +126,12 @@
   color: var(--brand-blue, #0176d3) !important;
   font-weight: 600 !important;
   border-bottom: 2px solid var(--brand-blue, #0176d3) !important;
-  background: transparent !important;
+  background: rgba(1, 118, 211, 0.04) !important;
   box-shadow: none !important;
 }
 
 .cat-pill__icon {
+  flex-shrink: 0;
   --sds-c-icon-color-foreground-default: #64748b;
   --slds-c-icon-color-foreground-default: #64748b;
   transition: color 0.15s ease;
@@ -129,6 +140,31 @@
 .cat-pill_active .cat-pill__icon {
   --sds-c-icon-color-foreground-default: var(--brand-blue, #0176d3) !important;
   --slds-c-icon-color-foreground-default: var(--brand-blue, #0176d3) !important;
+}
+
+.cat-pill__label {
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+@media (max-width: 1200px) {
+  .cat-pill {
+    padding: 0.65rem 0.35rem;
+    font-size: 0.8rem;
+    gap: 0.35rem;
+  }
+}
+
+@media (max-width: 960px) {
+  .cat-pill {
+    padding: 0.6rem 0.25rem;
+    font-size: 0.76rem;
+    gap: 0.3rem;
+  }
 }
 
 /* ---- Section Subbar ------------------------------------------------------ */
@@ -337,7 +373,16 @@
    ========================================================================== */
 @media (max-width: 768px) {
   .cat-nav {
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cat-pill {
+    flex: 1 0 85px;
+    min-width: 85px;
+    padding: 0.6rem 0.35rem;
+    font-size: 0.76rem;
+    gap: 0.3rem;
   }
 
   .table-scroll {
@@ -427,12 +472,17 @@
 }
 
 @media (max-width: 480px) {
-  .cat-pill__label {
-    display: none;
+  .cat-pill {
+    flex: 1 0 76px;
+    min-width: 76px;
+    padding: 0.55rem 0.25rem;
+    font-size: 0.72rem;
+    gap: 0.25rem;
   }
 
-  .cat-pill {
-    padding: 0.5rem 0.6rem;
+  .cat-pill__label {
+    display: inline-block;
+    max-width: 48px;
   }
 
   .toolbar-row lightning-button-group {

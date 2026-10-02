@@ -395,6 +395,16 @@ export default class AdminAccessEditor extends NavigationMixin(
     const tab = event.currentTarget.dataset.tab;
     this.activeTab = tab;
     this.loadTab(tab, true);
+    if (
+      event.currentTarget &&
+      typeof event.currentTarget.scrollIntoView === "function"
+    ) {
+      event.currentTarget.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center"
+      });
+    }
   }
 
   handleFilterChange(event) {

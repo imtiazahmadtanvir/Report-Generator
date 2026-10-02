@@ -992,11 +992,14 @@
   border: 1px solid #cbd5e1;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
   gap: 4px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .subnav-toggle-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 8px 22px;
   border-radius: 24px;
@@ -1010,6 +1013,7 @@
   outline: none;
   user-select: none;
   line-height: 1;
+  box-sizing: border-box;
 }
 
 .subnav-toggle-btn:hover:not(.subnav-toggle-btn_active) {
@@ -1069,6 +1073,16 @@
   .user-profile-subnav-container {
     flex-direction: column;
     gap: 10px;
+    width: 100%;
+  }
+  .user-profile-toggle-group {
+    width: 100%;
+    max-width: 22rem;
+  }
+  .subnav-toggle-btn {
+    flex: 1 1 50%;
+    justify-content: center;
+    padding: 8px 14px;
   }
   .user-profile-subnav-meta {
     position: static;
