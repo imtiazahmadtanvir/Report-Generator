@@ -176,7 +176,7 @@ public with sharing class AdminSecurityService {
     String whereClause = conditions.isEmpty()
       ? ''
       : (' WHERE ' + String.join(conditions, ' AND '));
-    Integer safeSize = (pageSize == null || pageSize <= 0) ? 15 : pageSize;
+    Integer safeSize = (pageSize == null || pageSize <= 0) ? 10 : pageSize;
     Integer safePage = (pageNumber == null || pageNumber < 1) ? 1 : pageNumber;
     Integer offset = (safePage - 1) * safeSize;
     Integer totalCount = Database.countQuery(
@@ -579,7 +579,7 @@ public with sharing class AdminSecurityService {
       filters += ' AND (Name LIKE :term OR Label LIKE :term OR Description LIKE :term)';
     }
 
-    Integer safeSize = (pageSize == null || pageSize <= 0) ? 15 : pageSize;
+    Integer safeSize = (pageSize == null || pageSize <= 0) ? 10 : pageSize;
     Integer safePage = (pageNumber == null || pageNumber < 1) ? 1 : pageNumber;
     Integer offset = (safePage - 1) * safeSize;
     Integer totalCount = Database.countQuery(
@@ -1695,7 +1695,7 @@ public with sharing class AdminSecurityService {
     List<AdminSecurityDataModel.ObjectPermItem> allSorted = mergedMap.values();
     allSorted.sort();
 
-    Integer safeSize = (pageSize == null || pageSize <= 0) ? 15 : pageSize;
+    Integer safeSize = (pageSize == null || pageSize <= 0) ? 10 : pageSize;
     Integer safePage = (pageNumber == null || pageNumber < 1) ? 1 : pageNumber;
     Integer offset = (safePage - 1) * safeSize;
     Integer totalCount = allSorted.size();
@@ -1865,7 +1865,7 @@ public with sharing class AdminSecurityService {
     results.sort();
 
     // In-memory pagination (field lists come from describe, not SOQL).
-    Integer safeSize = (pageSize == null || pageSize <= 0) ? 15 : pageSize;
+    Integer safeSize = (pageSize == null || pageSize <= 0) ? 10 : pageSize;
     Integer safePage = (pageNumber == null || pageNumber < 1) ? 1 : pageNumber;
     Integer total = results.size();
     Integer startIdx = (safePage - 1) * safeSize;

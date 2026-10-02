@@ -38,7 +38,7 @@ import createPermissionSetGroup from "@salesforce/apex/AdminAccessController.cre
 import addPermissionSetsToGroup from "@salesforce/apex/AdminAccessController.addPermissionSetsToGroup";
 import removePermissionSetFromGroup from "@salesforce/apex/AdminAccessController.removePermissionSetFromGroup";
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 10;
 const VALID_TABS = new Set([
   "userAndProfile",
   "profiles",
@@ -56,8 +56,8 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
   @track userProfileSubTab = "profile"; // 'profile' or 'user' (default 'profile')
 
   // Current page (1-based) and total record count for each paginated list
-  @track pages = { users: 1, permSets: 1, objects: 1, fls: 1 };
-  @track totals = { users: 0, permSets: 0, objects: 0, fls: 0 };
+  @track pages = { profiles: 1, users: 1, permSets: 1, objects: 1, fls: 1 };
+  @track totals = { profiles: 0, users: 0, permSets: 0, objects: 0, fls: 0 };
   // Full permission-set list for the Object/FLS target dropdowns (not paginated)
   @track permSetOptionsAll = [];
 
@@ -256,8 +256,19 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     }
   }
 
+  _resizeHandler = null;
+
+  renderedCallback() {
+    this.adjustLayoutHeight();
+  }
+
   connectedCallback() {
     this._connected = true;
+    this._resizeHandler = () => this.adjustLayoutHeight();
+    window.addEventListener("resize", this._resizeHandler);
+    if (window.scrollY > 0) {
+      window.scrollTo(0, 0);
+    }
     const { tab, subTab } = this.getUrlParams();
     if (tab && VALID_TABS.has(tab)) {
       if (tab === "profiles") {
@@ -278,6 +289,31 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
       );
     }
     this.loadInitialData();
+  }
+
+  disconnectedCallback() {
+    if (this._resizeHandler) {
+      window.removeEventListener("resize", this._resizeHandler);
+      this._resizeHandler = null;
+    }
+  }
+
+  adjustLayoutHeight() {
+    const wrapper = this.template.querySelector(".admin-app-wrapper");
+    if (!wrapper) return;
+
+    if (window.scrollY > 0) {
+      window.scrollTo(0, 0);
+    }
+
+    const rect = wrapper.getBoundingClientRect();
+    if (rect.top > 0) {
+      const exactHeight = Math.floor(window.innerHeight - rect.top - 14);
+      if (exactHeight > 300) {
+        wrapper.style.height = `${exactHeight}px`;
+        wrapper.style.maxHeight = `${exactHeight}px`;
+      }
+    }
   }
 
   getUrlParams() {
@@ -509,7 +545,10 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     this.updateTargetDropdowns();
   }
 
-  applyProfileFilters() {
+  applyProfileFilters(resetPage = true) {
+    if (resetPage) {
+      this.pages = { ...this.pages, profiles: 1 };
+    }
     let filtered = this.allProfilesList;
 
     if (this.profileTypeFilter === "Custom") {
@@ -525,6 +564,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     }
 
     this.profilesList = filtered;
+    this.totals = { ...this.totals, profiles: filtered.length };
   }
 
   async loadObjects() {
@@ -1179,13 +1219,20 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
   }
 
   async handleTabChange(event) {
-    const tabName = event.detail.name || event.detail.value;
+    const tabName =
+      event.detail?.name ||
+      event.detail?.value ||
+      event.currentTarget?.dataset?.name;
     if (!tabName) return;
     await this.resetAndLoadTab(tabName);
   }
 
   async resetAndLoadTab(tabName, subTab) {
     this.activeTab = tabName;
+    const mainArea = this.template.querySelector(".admin-main");
+    if (mainArea) {
+      mainArea.scrollTop = 0;
+    }
 
     // Reset modals & dialogs across tabs
     this.showConfirmModal = false;
@@ -1221,7 +1268,7 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
         this.profileSearchTerm = "";
         this.profileTypeFilter = "Custom";
         this.profileLicenseFilter = "All";
-        this.pages = { ...this.pages, users: 1 };
+        this.pages = { ...this.pages, users: 1, profiles: 1 };
         this.isLoading = true;
         try {
           await Promise.all([
@@ -2299,42 +2346,120 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
   // COMPUTED GETTERS
   // =========================================================================
   get navItems() {
+    const o = this.overview || {};
+    const isUserProf = this.isUserAndProfileTab;
+    const isPermSets = this.activeTab === "permSets";
+    const isGroups = this.activeTab === "groups";
+    const isApps = this.activeTab === "apps";
+    const isObjects = this.activeTab === "objects";
+    const isFields = this.activeTab === "fields";
+
     return [
       {
         name: "userAndProfile",
         value: "userAndProfile",
         label: "User & Profile",
-        icon: "utility:user_role"
+        icon: "utility:identity",
+        count: o.totalUsers || 0,
+        hasCount: true,
+        isActive: isUserProf,
+        iconVariant: isUserProf ? "inverse" : "",
+        itemClass: isUserProf
+          ? "sidebar-nav-item active"
+          : "sidebar-nav-item",
+        iconBoxClass: isUserProf
+          ? "nav-icon-box active"
+          : "nav-icon-box",
+        badgeClass: isUserProf
+          ? "nav-badge-pill active"
+          : "nav-badge-pill"
       },
       {
         name: "permSets",
         value: "permSets",
         label: "Permission Sets",
-        icon: "utility:lock"
+        icon: "utility:lock",
+        count: o.totalPermSets || 0,
+        hasCount: true,
+        isActive: isPermSets,
+        iconVariant: isPermSets ? "inverse" : "",
+        itemClass: isPermSets
+          ? "sidebar-nav-item active"
+          : "sidebar-nav-item",
+        iconBoxClass: isPermSets
+          ? "nav-icon-box active"
+          : "nav-icon-box",
+        badgeClass: isPermSets
+          ? "nav-badge-pill active"
+          : "nav-badge-pill"
       },
       {
         name: "groups",
         value: "groups",
         label: "Permission Set Groups",
-        icon: "utility:groups"
+        icon: "utility:groups",
+        count: o.totalPermSetGroups || 0,
+        hasCount: true,
+        isActive: isGroups,
+        iconVariant: isGroups ? "inverse" : "",
+        itemClass: isGroups
+          ? "sidebar-nav-item active"
+          : "sidebar-nav-item",
+        iconBoxClass: isGroups
+          ? "nav-icon-box active"
+          : "nav-icon-box",
+        badgeClass: isGroups
+          ? "nav-badge-pill active"
+          : "nav-badge-pill"
       },
       {
         name: "apps",
         value: "apps",
         label: "Apps",
-        icon: "utility:apps"
+        icon: "utility:apps",
+        count: o.totalApps || 0,
+        hasCount: true,
+        isActive: isApps,
+        iconVariant: isApps ? "inverse" : "",
+        itemClass: isApps
+          ? "sidebar-nav-item active"
+          : "sidebar-nav-item",
+        iconBoxClass: isApps ? "nav-icon-box active" : "nav-icon-box",
+        badgeClass: isApps ? "nav-badge-pill active" : "nav-badge-pill"
       },
       {
         name: "objects",
         value: "objects",
         label: "Object Access",
-        icon: "utility:database"
+        icon: "utility:database",
+        count: o.totalObjects || 0,
+        hasCount: true,
+        isActive: isObjects,
+        iconVariant: isObjects ? "inverse" : "",
+        itemClass: isObjects
+          ? "sidebar-nav-item active"
+          : "sidebar-nav-item",
+        iconBoxClass: isObjects
+          ? "nav-icon-box active"
+          : "nav-icon-box",
+        badgeClass: isObjects
+          ? "nav-badge-pill active"
+          : "nav-badge-pill"
       },
       {
         name: "fields",
         value: "fields",
         label: "Field-Level Security",
-        icon: "utility:shield"
+        icon: "utility:shield",
+        count: o.totalFields || 0,
+        hasCount: false,
+        isActive: isFields,
+        iconVariant: isFields ? "inverse" : "",
+        itemClass: isFields
+          ? "sidebar-nav-item active"
+          : "sidebar-nav-item",
+        iconBoxClass: isFields ? "nav-icon-box active" : "nav-icon-box",
+        badgeClass: isFields ? "nav-badge-pill active" : "nav-badge-pill"
       }
     ];
   }
@@ -2568,6 +2693,31 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     return items;
   }
 
+  get profilesView() {
+    const total = this.totals.profiles || 0;
+    const pageSize = PAGE_SIZE;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const current = Math.min(Math.max(this.pages.profiles || 1, 1), totalPages);
+    const startIdx = total === 0 ? 0 : (current - 1) * pageSize;
+    const pageRows = (this.profilesList || []).slice(
+      startIdx,
+      startIdx + pageSize
+    );
+    const count = pageRows.length;
+    return {
+      rows: pageRows,
+      page: current,
+      totalPages,
+      total,
+      showing: total === 0 ? "0" : `${startIdx + 1}–${startIdx + count}`,
+      prevDisabled: current <= 1,
+      nextDisabled: current >= totalPages,
+      multiPage: totalPages > 1,
+      showPagination: total > 0,
+      items: this.buildPageItems(current, totalPages, "profiles")
+    };
+  }
+
   get usersView() {
     return this.buildPageView(this.usersList, "users");
   }
@@ -2598,6 +2748,8 @@ export default class AdminAccess extends NavigationMixin(LightningElement) {
     }
     this.pages = { ...this.pages, [listKey]: target };
     switch (listKey) {
+      case "profiles":
+        break;
       case "users":
         await this.loadUsers(false);
         break;

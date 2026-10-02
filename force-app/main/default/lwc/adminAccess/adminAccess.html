@@ -65,22 +65,50 @@
         <aside
           class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_2-of-12 slds-show_medium admin-sidebar"
         >
-          <lightning-vertical-navigation
-            selected-item={activeTab}
-            onselect={handleTabChange}
-            shaded
-          >
-            <lightning-vertical-navigation-section label="Security Console">
+          <div class="custom-sidebar">
+            <div class="sidebar-header">
+              <div class="sidebar-header-left">
+                <lightning-icon
+                  icon-name="utility:shield"
+                  size="x-small"
+                  class="sidebar-console-icon"
+                ></lightning-icon>
+                <span class="sidebar-header-title">SECURITY CONSOLE</span>
+              </div>
+              <span class="sidebar-module-badge">6 Modules</span>
+            </div>
+
+            <nav
+              class="sidebar-nav-list"
+              role="navigation"
+              aria-label="Security Console Modules"
+            >
               <template for:each={navItems} for:item="item">
-                <lightning-vertical-navigation-item-icon
+                <button
                   key={item.name}
-                  label={item.label}
-                  name={item.name}
-                  icon-name={item.icon}
-                ></lightning-vertical-navigation-item-icon>
+                  class={item.itemClass}
+                  data-name={item.name}
+                  onclick={handleTabChange}
+                  type="button"
+                >
+                  <div class="nav-left-group">
+                    <div class={item.iconBoxClass}>
+                      <lightning-icon
+                        icon-name={item.icon}
+                        size="x-small"
+                        variant={item.iconVariant}
+                        class="nav-icon"
+                      ></lightning-icon>
+                    </div>
+                    <span class="nav-label">{item.label}</span>
+                  </div>
+                  <template lwc:if={item.hasCount}>
+                    <span class={item.badgeClass}>{item.count}</span>
+                  </template>
+                </button>
               </template>
-            </lightning-vertical-navigation-section>
-          </lightning-vertical-navigation>
+            </nav>
+          </div>
         </aside>
 
         <!-- COMPACT NAVIGATION (mobile) -->
@@ -314,7 +342,7 @@
                   </div>
                   <div class="toolbar-actions">
                     <span class="slds-text-body_small slds-text-color_weak">
-                      Showing {profilesList.length} Profile(s)
+                      Showing {profilesView.showing} of {profilesView.total}
                     </span>
                   </div>
                 </div>
@@ -331,7 +359,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <template for:each={profilesList} for:item="p">
+                      <template for:each={profilesView.rows} for:item="p">
                         <tr key={p.id}>
                           <td data-label="Profile Name">
                             <button
@@ -356,6 +384,54 @@
                     </tbody>
                   </table>
                 </div>
+
+                <template lwc:if={profilesView.showPagination}>
+                  <div class="pagination-bar">
+                    <span class="pagination-info"
+                      >Showing {profilesView.showing} of {profilesView.total}</span
+                    >
+                    <div class="pagination-controls">
+                      <button
+                        class="page-nav"
+                        data-list="profiles"
+                        data-dir="prev"
+                        disabled={profilesView.prevDisabled}
+                        onclick={handlePageChange}
+                        title="Previous"
+                      >
+                        ‹
+                      </button>
+                      <template for:each={profilesView.items} for:item="pi">
+                        <template lwc:if={pi.isEllipsis}>
+                          <span key={pi.key} class="page-ellipsis"
+                            >{pi.label}</span
+                          >
+                        </template>
+                        <template lwc:else>
+                          <button
+                            key={pi.key}
+                            class={pi.cssClass}
+                            data-list="profiles"
+                            data-page={pi.page}
+                            onclick={handlePageChange}
+                          >
+                            {pi.label}
+                          </button>
+                        </template>
+                      </template>
+                      <button
+                        class="page-nav"
+                        data-list="profiles"
+                        data-dir="next"
+                        disabled={profilesView.nextDisabled}
+                        onclick={handlePageChange}
+                        title="Next"
+                      >
+                        ›
+                      </button>
+                    </div>
+                  </div>
+                </template>
               </template>
             </template>
 
