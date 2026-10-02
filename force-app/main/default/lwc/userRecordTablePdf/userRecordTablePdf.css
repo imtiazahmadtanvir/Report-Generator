@@ -61,9 +61,10 @@
   justify-content: space-between;
   align-items: center;
   color: var(--text-primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-  position: relative;
-  z-index: 10;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 90;
   gap: 16px;
   flex-wrap: wrap;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -288,7 +289,10 @@
   --slds-c-button-brand-color-background: #0176d3;
   --slds-c-button-brand-color-background-hover: #015ba5;
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(1, 118, 211, 0.3);
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 
 /* ==========================================================================
@@ -605,6 +609,8 @@
 .hub-action-col {
   flex: 0 0 auto;
   align-self: flex-start;
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 .hub-field-label {
@@ -694,9 +700,14 @@
 .btn-hub-continue {
   --slds-c-button-brand-color-background: #0176d3;
   --slds-c-button-brand-color-background-hover: #015ba5;
+  --slds-c-button-color-background: transparent;
+  --slds-c-button-shadow: none;
   font-weight: 700;
-  height: 38px;
-  box-shadow: 0 2px 8px rgba(1, 118, 211, 0.3);
+  background: transparent !important;
+  background-color: transparent !important;
+  border-radius: 9999px !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 
 /* Responsive Objects Grid Container */
@@ -942,7 +953,10 @@
   --slds-c-button-brand-color-background-hover: #015ba5;
   font-size: 0.95rem;
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(1, 118, 211, 0.3);
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 
 /* ==========================================================================
